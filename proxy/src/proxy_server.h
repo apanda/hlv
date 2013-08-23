@@ -20,7 +20,7 @@ typedef hlv::service::common::ConnectionManager<ConnectionPtr> ConnectionManager
 /// HLV proxy server
 typedef hlv::service::common::Server <Connection, 
                                       ConnectionManager, 
-                                      const ConnectionInformation&>
+                                      ConnectionInformation&>
                             Server;
 } // namespace proxy
 } // namespace service

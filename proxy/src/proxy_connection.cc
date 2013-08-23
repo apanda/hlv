@@ -13,12 +13,12 @@ namespace service{
 namespace proxy {
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
-                        const ConnectionInformation& config) :
+                        ConnectionInformation& config) :
     socket_ (std::move(socket)),
     bufferSize_ (0),
     manager_ (manager),
     config_ (config),
-    groups_ (config) {
+    groups_ (config.groups) {
     join_.Clear();
     join_.set_token (config_.token);
     join_.set_serviceaddr(config_.address);
@@ -97,7 +97,12 @@ void Connection::read_buffer (uint64_t length) {
                         return;
                     }
                     BOOST_LOG_TRIVIAL(info) << "Received register message from " << register_.address() << " at distance " << register_.distance();
-                     
+                    std::string token = register_.token();
+                    if (groups_->find (token) == groups_->end ()) {
+                        groups_->emplace (token, 
+                            std::make_shared<AnycastGroup>(token, nullptr));
+                    }
+                    (*groups_)[token]->add_member("", register_);
                     register_.Clear ();
                     read_size();
 

@@ -49,7 +49,7 @@ class Connection
     // Construct a Connection given a socket
     explicit Connection (boost::asio::ip::tcp::socket socket, 
             hlv::service::common::ConnectionManager<ConnectionPtr>& manager,
-            const ConnectionInformation& config);
+            ConnectionInformation& config);
 
     // Start listening for things
     void start ();

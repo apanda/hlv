@@ -11,3 +11,9 @@
 *.lai
 *.la
 *.a
+
+*.swp
+*.pb.h
+*.pb.cc
+bin/*
+bin

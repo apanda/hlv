@@ -1,0 +1,51 @@
+package hlv_service;
+
+// Authentication message
+message Authenticate {
+    required string Identity = 1;
+    required bytes Token = 2;
+};
+
+// Request message from service
+message Request {
+    required bytes Token            = 1;
+    required int32 RequestType      = 2;
+    required string RequestArgument = 3;
+};
+
+message ServiceRequest {
+    // Request type
+    enum RequestType {
+        REQUEST      = 0;
+        AUTHENTICATE = 1;
+    };
+    required RequestType MsgType       = 1;
+    required int64 RequestID           = 2;
+    optional Authenticate Authenticate = 3;
+    optional Request      Request      = 4;
+};
+
+message ServiceResponse {
+    required int64  RequestID = 1;
+    required bool   Success   = 2;
+    required bytes  Response  = 3;
+};
+
+// Register with proxy
+message ProxyRegister {
+    required bytes Token            = 1;
+    required string Address         = 2;
+    required int32  Port            = 3;
+    // This should somehow be filled in by the network??
+    required int32  Distance        = 4;
+    repeated int32  RequestTypes    = 5;
+};
+
+// Message sent by proxy on connection
+message ProxyJoin {
+    // Something authenticating the proxy
+    required bytes Token           = 1;
+    // Address and port to use for service
+    required string ServiceAddr    = 2;
+    required int32  ServicePort    = 3;
+};

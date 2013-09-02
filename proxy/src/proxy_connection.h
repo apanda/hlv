@@ -11,11 +11,6 @@
 namespace hlv {
 namespace service{
 namespace proxy {
-namespace {
-    typedef std::shared_ptr<std::map<std::string, std::shared_ptr<
-                    hlv::service::proxy::AnycastGroup>>>
-            AnycastGroupType;
-}
 struct ConnectionInformation {
     AnycastGroupType groups;
     std::string token; // A token to authenticate proxy

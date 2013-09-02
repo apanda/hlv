@@ -33,6 +33,10 @@ public:
       connections_.erase(c);
       c->stop();
   }
+
+  virtual ~ConnectionManager () {
+      stop_all ();
+  }
 };
 } // namespace server
 } // namespace service

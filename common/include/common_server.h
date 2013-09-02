@@ -81,6 +81,10 @@ class Server {
         signals_.cancel();
     }
 
+    virtual ~Server () {
+        stop ();
+    }
+
   private:
     // Set things up so we quit when a signal is caught
     void handle_signal () {

@@ -23,6 +23,10 @@ class SyncClient
     SyncClient ( boost::asio::io_service& io_service,
             std::string rhost, 
             std::string rport);
+    
+    virtual ~SyncClient () {
+        stop ();
+    }
 
     // Connect to the remote host and port
     bool connect ();

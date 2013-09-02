@@ -1,7 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project (HLV_SERVICE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -stdlib=libc++ -std=c++11")
-find_package(Boost 1.54 EXACT REQUIRED COMPONENTS log log_setup system)
+find_package(Boost 1.54 EXACT REQUIRED COMPONENTS log log_setup system program_options)
 if (Boost_FOUND)
     message("boost found ${Boost_INCLUDE_DIRS} ${Boost_LIBRARIES}")
     include_directories(${Boost_INCLUDE_DIRS})

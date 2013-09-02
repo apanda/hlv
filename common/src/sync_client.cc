@@ -4,8 +4,8 @@
 #include <signal.h>
 #include <utility>
 #include <iostream>
-#include <boost/log/trivial.hpp>
 #include <string>
+#include <boost/log/trivial.hpp>
 #include "service.pb.h"
 #include "sync_client.h"
 namespace hlv {

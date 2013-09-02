@@ -11,7 +11,7 @@
 #include "service.pb.h"
 #include "proxy_server.h"
 #include "anycast_group.h"
-#include "null_service.h"
+#include "proxy_service.h"
 
 namespace po = boost::program_options;
 
@@ -51,13 +51,13 @@ main (int argc, char* argv[]) {
     BOOST_LOG_TRIVIAL(info) << "Using local server address " << saddr << ":" << sport;
     BOOST_LOG_TRIVIAL(info) << "Using proxy server " << paddr << ":" << pport;
     boost::asio::io_service io_service;
+    auto anycastGroupDict = std::make_shared<
+            std::map<std::string, std::shared_ptr<hlv::service::proxy::AnycastGroup>>>();
     hlv::service::server::Server server (
             io_service,
             saddr, 
             sport, 
-            std::make_shared<hlv::service::server::NullService>());
-    auto anycastGroupDict = std::make_shared<
-            std::map<std::string, std::shared_ptr<hlv::service::proxy::AnycastGroup>>>();
+            std::make_shared<hlv::service::proxy::ProxyService>(anycastGroupDict, io_service));
     hlv::service::proxy::ConnectionInformation join (anycastGroupDict,
                                                      "",
                                                      saddr, 

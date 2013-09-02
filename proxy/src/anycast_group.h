@@ -3,8 +3,10 @@
 #include <memory>
 #include <map>
 #include <boost/heap/fibonacci_heap.hpp>
+#include <boost/asio.hpp>
 #include <vector>
 #include <utility>
+#include <tuple>
 #include "service.pb.h"
 #ifndef __HLV_PROXY_AC_GROUP__
 #define __HLV_PROXY_AC_GROUP__
@@ -47,24 +49,21 @@ class AnycastGroup :
                     const hlv_service::ProxyRegister&);
 
     bool find_nearest_provider (const int32_t function,
-                                std::shared_ptr<Provider>& ptr,
+                         std::shared_ptr<Provider>& ptr,
                                 const bool hierarchical,
                                 const bool fallback);
 
-   private:
-     typedef std::pair<int32_t, std::shared_ptr<Provider>> stored_pair;
+    std::tuple<bool, const std::string> execute_request (
+                                    boost::asio::io_service& io_service,
+                                    const std::string& token,
+                                    const int32_t function,
+                                    const std::string& arguments,
+                                    const bool hierarchical,
+                                    const bool fallback);
 
-     bool find_nearest_provider_internal (const int32_t function,
-                             std::shared_ptr<Provider>& ptr,
-                             const bool hierarchical);
-     
-     // Authentication token this group is associated with
-     const std::string& auth_token_;
-     
-     // Anycast group that is higher up the hierarchy.
-     std::shared_ptr<AnycastGroup> parent_; 
-     
+   private:
      // Datastructure declaration
+     typedef std::pair<int32_t, std::shared_ptr<Provider>> stored_pair;
      struct compare_first {
          bool operator() (const stored_pair& first, const stored_pair& second) const {
              return (first.first > second.first);
@@ -74,11 +73,41 @@ class AnycastGroup :
                          boost::heap::compare<compare_first>,
                          boost::heap::stable<true>> fib_pq;
 
+     bool find_nearest_provider_internal (const int32_t function,
+                         std::shared_ptr<Provider>& ptr,
+                             const bool hierarchical);
+
+     std::tuple<bool, const std::string> execute_request_internal (
+                                    boost::asio::io_service& io_service,
+                                    const std::string& token,
+                                    const int32_t function,
+                                    const std::string& arguments,
+                                    const bool hierarchical);
+
+     std::tuple<bool, const std::string> execute_pq_requests (
+                                    const fib_pq& pq,
+                                    boost::asio::io_service& io_service,
+                                    const std::string& token,
+                                    const int32_t function,
+                                    const std::string& arguments
+                                    );
+
+     
+     // Authentication token this group is associated with
+     const std::string& auth_token_;
+     
+     // Anycast group that is higher up the hierarchy.
+     std::shared_ptr<AnycastGroup> parent_; 
+     
+
      // The main map datastructure
      std::map<int32_t, fib_pq> membersByFunction_;
 
      fib_pq allMembers_;
 };
+typedef std::shared_ptr<std::map<std::string, std::shared_ptr<
+                AnycastGroup>>>
+        AnycastGroupType;
 } // proxy
 } // service
 } // hlv

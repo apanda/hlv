@@ -5,25 +5,25 @@
 #include <boost/asio.hpp>
 #include "service.pb.h"
 #include "common_manager.h"
-#include "anycast_group.h"
 #ifndef _HLV_PROXY_CONNECTION_H_
 #define _HLV_PROXY_CONNECTION_H_
 namespace hlv {
 namespace service{
 namespace proxy {
 struct ConnectionInformation {
-    AnycastGroupType groups;
     std::string token; // A token to authenticate proxy
     std::string address; // Address of service to use
-    std::string port; // Port of service to use
-    ConnectionInformation(AnycastGroupType &_groups,
+    std::string client_port; // Port of service to use
+    std::string server_port;
+    ConnectionInformation(
                     std::string _token,
                     std::string _address,
-                    std::string _port) :
-                    groups (_groups),
+                    std::string _cport,
+                    std::string _sport) :
                     token (_token),
                     address (_address),
-                    port (_port) {
+                    client_port (_cport),
+                    server_port (_sport) {
     }
 };
 
@@ -72,9 +72,6 @@ class Connection
 
     // Configuration
     const ConnectionInformation& config_;
-
-    // What to do with all of these connections
-    AnycastGroupType& groups_;
 
     // Buffer, expect never to need more than 128k
     std::array<char, 131072> buffer_;

@@ -17,3 +17,5 @@
 *.pb.cc
 bin/*
 bin
+ext
+ext/*

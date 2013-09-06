@@ -45,7 +45,10 @@ message ProxyRegister {
 message ProxyJoin {
     // Something authenticating the proxy
     required bytes Token           = 1;
+    // Auth service request token
+    required bytes AuthToken       = 2;
     // Address and port to use for service
-    required string ServiceAddr    = 2;
-    required int32  ServicePort    = 3;
+    required string ServiceAddr    = 3;
+    required int32  ServicePort    = 4;
+    required int32  ClientPort    = 5;
 };

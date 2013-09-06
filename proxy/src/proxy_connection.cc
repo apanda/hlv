@@ -17,12 +17,13 @@ Connection::Connection (boost::asio::ip::tcp::socket socket,
     socket_ (std::move(socket)),
     bufferSize_ (0),
     manager_ (manager),
-    config_ (config),
-    groups_ (config.groups) {
+    config_ (config) {
     join_.Clear();
     join_.set_token (config_.token);
+    join_.set_authtoken ("auth");
     join_.set_serviceaddr(config_.address);
-    join_.set_serviceport(std::stoi(config_.port));
+    join_.set_serviceport(std::stoi(config_.server_port));
+    join_.set_clientport(std::stoi(config_.client_port));
 }
 
 void Connection::start () {
@@ -98,11 +99,6 @@ void Connection::read_buffer (uint64_t length) {
                     }
                     BOOST_LOG_TRIVIAL(info) << "Received register message from " << register_.address() << " at distance " << register_.distance();
                     std::string token = register_.token();
-                    if (groups_->find (token) == groups_->end ()) {
-                        groups_->emplace (token, 
-                            std::make_shared<AnycastGroup>(token, nullptr));
-                    }
-                    (*groups_)[token]->add_member("", register_);
                     register_.Clear ();
                     read_size();
 

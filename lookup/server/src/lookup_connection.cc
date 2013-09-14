@@ -4,6 +4,8 @@
 #include <utility>
 #include <iostream>
 #include <string>
+#include <cstring>
+#include <algorithm>
 #include <boost/log/trivial.hpp>
 #include "lookup_connection.h"
 #include "lookup_server.h"
@@ -19,6 +21,7 @@ namespace {
 namespace hlv {
 namespace service{
 namespace lookup {
+const std::string Connection::PERM_BIT_FIELD = "ev:perm_bits";
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
                         ConnectionInformation& config) :
@@ -99,10 +102,16 @@ void Connection::read_buffer (uint64_t length) {
                         manager_.stop(shared_from_this());
                         return;
                     }
+                    BOOST_LOG_TRIVIAL (info) << "Querying " 
+                                             << config_.prefix 
+                                             << ":"
+                                             << query_.querystring ();
                     redisAsyncCommand (config_.redisContext, 
                                         getCallback, 
                                         this, 
-                                        "HGETALL ev:%s", query_.querystring ().c_str());  
+                                        "HGETALL %s:%s", 
+                                        config_.prefix.c_str(),
+                                        query_.querystring ().c_str());  
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
                     BOOST_LOG_TRIVIAL(info) << "Connection ended read: " << bytes_transfered;
@@ -128,11 +137,25 @@ void Connection::getSucceeded (redisReply* reply) {
         // Indicate that we did in fact find a value
         response_.set_success (true);
         for (uint32_t j = 0; j < reply->elements; j += 2) {
-            auto val = response_.add_values();
-            val->set_type (reply->element[j]->str);
-            val->set_value (reply->element[j + 1]->str);
+            std::string key (reply->element[j]->str);
+            if (key == PERM_BIT_FIELD) {
+                BOOST_LOG_TRIVIAL (info) << "Checking authorization token"; 
+                uint64_t token = std::stoull(std::string
+                                            (reply->element[j+1]->str));
+                if (token != 0 && !( token & query_.token())) {
+                    BOOST_LOG_TRIVIAL (info) << "Not authorized, failing ";
+                    response_.set_success (false);
+                    response_.clear_values ();
+                    break;
+                }
+            } else {
+                auto val = response_.add_values();
+                val->set_type (key);
+                val->set_value (reply->element[j + 1]->str);
+            }
         }
     } else {
+        BOOST_LOG_TRIVIAL (info) << "No entry found, failing";
         // Indicate a sad lack of values
         response_.set_success (false);
     }

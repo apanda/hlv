@@ -1,3 +1,5 @@
+// Copyright 20xx The Regents of the University of California
+// This is a test service for SDN-v2 High Level Virtualization
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -12,6 +14,7 @@
 #include "lookup_server.h"
 #include "hiredisasio.h"
 
+// Main file for EV lookup server
 namespace po = boost::program_options;
 namespace {
 void connectCallback (const redisAsyncContext* c, int status) {
@@ -39,14 +42,17 @@ main (int argc, char* argv[]) {
     po::options_description desc("Lookup service options");
     std::string address = "0.0.0.0",
                 port    = "8085",
-                redisAddress = "127.0.0.1";
+                redisAddress = "127.0.0.1",
+                prefix = "ev";
     int32_t redisPort = 6379;
     desc.add_options()
         ("help,h", "Display help")
         ("address,a", po::value<std::string>(&address)->implicit_value("0.0.0.0"), "Bind to address")
         ("port,p", po::value<std::string>(&port)->implicit_value("8085"), "Bind to port")
         ("raddress,r", po::value<std::string>(&redisAddress)->implicit_value("127.0.0.1"), "Redis server")
-        ("rport", po::value<int32_t>(&redisPort)->implicit_value(6379), "Redis port");
+        ("rport", po::value<int32_t>(&redisPort)->implicit_value(6379), "Redis port")
+        ("prefix", po::value<std::string>(&prefix)->implicit_value("ev"), 
+                   "Prefix for redis DB");
     po::options_description options;
     options.add(desc);
     po::variables_map vm;
@@ -77,10 +83,11 @@ main (int argc, char* argv[]) {
     asio_redis::redisBoostClient client (io_service, context);
     // Server information
     hlv::service::lookup::ConnectionInformation information 
-                                                    ("authed", 
+                                                    (0, 
                                                      redisAddress,
                                                      redisPort,
-                                                     context);
+                                                     context,
+                                                     prefix);
     // Create a lookup server            
     hlv::service::lookup::Server lookup (
             io_service,

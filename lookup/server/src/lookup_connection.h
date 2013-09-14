@@ -15,19 +15,22 @@ namespace lookup {
 
 /// Information used by each of the connection objects for initialization.
 struct ConnectionInformation {
-    std::string token; // A token to authenticate this lookup server
+    uint64_t token; // A token to authenticate this lookup server
     std::string redisServer; // Redis server
     uint32_t redisPort; // Port
     redisAsyncContext* redisContext;
+    std::string prefix;
     ConnectionInformation(
-            const std::string& _token,
+            const uint64_t _token,
             const std::string& _redisServer,
             const uint32_t  _redisPort,
-            redisAsyncContext* _redisContext) :
+            redisAsyncContext* _redisContext,
+            std::string _prefix) :
             token (_token),
             redisServer (_redisServer),
             redisPort (_redisPort),
-            redisContext (_redisContext) {
+            redisContext (_redisContext),
+            prefix (_prefix) {
     }
 
 };
@@ -61,6 +64,9 @@ class Connection
     void getSucceeded (redisReply* reply);  
 
   private:
+    // Perm bit field
+    static const std::string PERM_BIT_FIELD;
+
     // Listen for buffer
     void read_size ();
 

@@ -2,13 +2,14 @@ package ev_lookup;
 
 // Lookup query for service or other entity
 message Query {
-    required bytes Token = 1;
+    // For now let us assume 64-bit perm fields as tokens
+    required uint64 Token = 1;
     required string QueryString = 2;
 };
 
 // Query response
 message Response {
-    required bytes Token = 1; // Token to indicate service is authoritative
+    required uint64 Token = 1; // Token to indicate service is authoritative
     required string QueryString = 2;
     required bool Success = 3;
     message ResponseValue {

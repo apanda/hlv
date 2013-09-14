@@ -2,6 +2,7 @@
 #include <utility>
 #include <boost/log/trivial.hpp>
 #include "query_client.h"
+#include "lookup.pb.h"
 namespace hlv {
 namespace lookup {
 namespace client {
@@ -13,6 +14,8 @@ EvLookupClient::EvLookupClient (const std::string& host,
                  host_ (host),
                  port_ (port),
                  connected_ (false),
+                 query_ (new ev_lookup::Query),
+                 response_ (new ev_lookup::Response),
                  io_service_ (),
                  socket_ (io_service_) {
 }
@@ -43,32 +46,32 @@ void EvLookupClient::disconnect () {
 /// resultToken: Token sent back by server, can be used to authenticate 
 ///              results
 /// result: Map of results
-bool EvLookupClient::Query (const std::string& token,
+bool EvLookupClient::Query (const uint64_t token,
                             const std::string& query,
-                            std::string& resultToken,
+                            uint64_t& resultToken,
                             LookupResult& result) const {
     if (!connected_) {
         return false;
     }
-    query_.Clear ();
-    response_.Clear ();
-    query_.set_token (token);
-    query_.set_querystring (query);
-    bool success = send_query (query_);
+    query_->Clear ();
+    response_->Clear ();
+    query_->set_token (token);
+    query_->set_querystring (query);
+    bool success = send_query (*query_);
     if (!success) {
         return false;
     }
-    success = recv_response (response_);
+    success = recv_response (*response_);
     if (!success) {
         return false;
     }
     
-    if (!response_.success ()) {
+    if (!response_->success ()) {
         return false;
     }
 
-    resultToken = response_.token ();
-    for (auto kv : response_.values ()) {
+    resultToken = response_->token ();
+    for (auto kv : response_->values ()) {
         // No emplace support :(
         result.insert (std::make_pair (kv.type(), kv.value()));
     }
@@ -119,6 +122,11 @@ bool EvLookupClient::recv_response (ev_lookup::Response& response) const {
 
     response.ParseFromArray (buffer_.data(), size);
     return true;
+}
+
+EvLookupClient::~EvLookupClient() {
+    delete query_;
+    delete response_;
 }
 }
 }

@@ -3,9 +3,12 @@
 #include <map>
 #include <memory>
 #include <boost/asio.hpp>
-#include "lookup.pb.h"
 #ifndef __EV_QUERY_CLIENT_LIB__
 #define __EV_QUERY_CLIENT_LIB__
+namespace ev_lookup {
+    class Query;
+    class Response;
+}
 namespace hlv {
 namespace lookup {
 namespace client {
@@ -38,10 +41,12 @@ class EvLookupClient {
     /// resultToken: Token sent back by server, can be used to authenticate 
     ///              results
     /// result: Map of results
-    bool Query (const std::string& token,
+    bool Query (const uint64_t token,
                 const std::string& query,
-                std::string& resultToken,
+                uint64_t& resultToken,
                 LookupResult& result) const;
+
+    virtual ~EvLookupClient();
 
   private:
     // Send a query to the server
@@ -56,8 +61,8 @@ class EvLookupClient {
     bool connected_;
 
     // Space to deserialize protobuf
-    mutable ev_lookup::Query query_;
-    mutable ev_lookup::Response response_;
+    mutable ev_lookup::Query* query_;
+    mutable ev_lookup::Response* response_;
     // Buffer, expect never to need more than 128k
     mutable std::array<char, 131072> buffer_;
 

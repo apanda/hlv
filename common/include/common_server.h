@@ -66,12 +66,12 @@ class Server {
         acceptor_.open(endpoint.protocol());
         acceptor_.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
         acceptor_.bind(endpoint);
-        acceptor_.listen();
-        do_accept();
     }
 
     // Run server accept loop
     void start () {
+        acceptor_.listen();
+        do_accept();
     }
 
     // Stop server accept loop

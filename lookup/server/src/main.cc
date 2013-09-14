@@ -10,9 +10,10 @@
 #include <boost/log/trivial.hpp>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
+#include <hiredisasio.h>
+#include "consts.h"
 #include "logging_common.h"
 #include "lookup_server.h"
-#include "hiredisasio.h"
 
 // Main file for EV lookup server
 namespace po = boost::program_options;
@@ -41,10 +42,10 @@ main (int argc, char* argv[]) {
     // Argument parsing
     po::options_description desc("Lookup service options");
     std::string address = "0.0.0.0",
-                port    = "8085",
+                port    = std::to_string (hlv::service::lookup::SERVER_PORT),
                 redisAddress = "127.0.0.1",
-                prefix = "ev";
-    int32_t redisPort = 6379;
+                prefix = hlv::service::lookup::REDIS_PREFIX;
+    int32_t redisPort = hlv::service::lookup::REDIS_PORT;
     desc.add_options()
         ("help,h", "Display help")
         ("address,a", po::value<std::string>(&address)->implicit_value("0.0.0.0"), "Bind to address")

@@ -9,6 +9,7 @@
 #include <boost/log/trivial.hpp>
 #include "lookup_connection.h"
 #include "lookup_server.h"
+#include "consts.h"
 
 namespace {
     void getCallback (redisAsyncContext* context, void* reply, void* data) {
@@ -21,7 +22,6 @@ namespace {
 namespace hlv {
 namespace service{
 namespace lookup {
-const std::string Connection::PERM_BIT_FIELD = "ev:perm_bits";
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
                         ConnectionInformation& config) :

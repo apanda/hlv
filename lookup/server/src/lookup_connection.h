@@ -64,8 +64,6 @@ class Connection
     void getSucceeded (redisReply* reply);  
 
   private:
-    // Perm bit field
-    static const std::string PERM_BIT_FIELD;
 
     // Listen for buffer
     void read_size ();

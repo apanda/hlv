@@ -3,6 +3,7 @@
 #include <utility>
 #include <boost/program_options.hpp>
 #include <query_client.h>
+#include "consts.h"
 namespace po = boost::program_options;
 
 // Example EV lookup client
@@ -12,13 +13,13 @@ int main (int argc, char* argv[]) {
     std::string server = "127.0.0.1",
                 query = "";
     uint64_t token = 0;
-    uint32_t port = 8085;
+    uint32_t port = hlv::service::lookup::SERVER_PORT;
 
     desc.add_options()
         ("h, help", "Display help") 
         ("s,server", po::value<std::string>(&server)->implicit_value("127.0.0.1"),
             "Lookup server to contact")
-        ("p,port", po::value<uint32_t>(&port)->implicit_value(8085),
+        ("p,port", po::value<uint32_t>(&port)->implicit_value(port),
             "Lookup server port");
 
     po::options_description hidden;

@@ -124,7 +124,7 @@ void Connection::getSucceeded (redisReply* reply) {
     // HGETALL responds with an array the where even elements represent
     // hash keys and odd elements represent values
     // See also: http://redis.io/commands/hgetall
-    if (reply->type == REDIS_REPLY_ARRAYi && reply->elements > 0) {
+    if (reply->type == REDIS_REPLY_ARRAY && reply->elements > 0) {
         // Indicate that we did in fact find a value
         response_.set_success (true);
         for (uint32_t j = 0; j < reply->elements; j += 2) {

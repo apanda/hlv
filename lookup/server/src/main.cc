@@ -8,7 +8,6 @@
 #include <boost/log/trivial.hpp>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
-#include "server.h"
 #include "logging_common.h"
 #include "lookup_server.h"
 #include "hiredisasio.h"

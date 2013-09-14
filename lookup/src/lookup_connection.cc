@@ -42,7 +42,7 @@ void Connection::write_response (const ev_lookup::Response& response) {
     uint64_t size = response.ByteSize ();
     *((uint64_t*)write_buffer_.data()) = size;
     response.SerializeToArray (write_buffer_.data() + sizeof(uint64_t), size);
-    BOOST_LOG_TRIVIAL (info) << "Writing join information";
+    BOOST_LOG_TRIVIAL (info) << "Writing response";
     boost::asio::async_write (socket_,
         boost::asio::buffer(write_buffer_),
         boost::asio::transfer_exactly (size + sizeof(uint64_t)),
@@ -52,7 +52,8 @@ void Connection::write_response (const ev_lookup::Response& response) {
                BOOST_LOG_TRIVIAL (info) << "Error sending join message " << ec;
                manager_.stop(shared_from_this());
            }
-           BOOST_LOG_TRIVIAL (info) << "Successfully joined";
+           BOOST_LOG_TRIVIAL (info) << "Successfully responded";
+           read_size ();
         }
     );
 }
@@ -98,7 +99,10 @@ void Connection::read_buffer (uint64_t length) {
                         manager_.stop(shared_from_this());
                         return;
                     }
-                    redisAsyncCommand (config_.redisContext, getCallback, this, "GET ev:%s", query_.querystring ().c_str());  
+                    redisAsyncCommand (config_.redisContext, 
+                                        getCallback, 
+                                        this, 
+                                        "HGETALL ev:%s", query_.querystring ().c_str());  
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
                     BOOST_LOG_TRIVIAL(info) << "Connection ended read: " << bytes_transfered;
@@ -113,8 +117,27 @@ void Connection::read_buffer (uint64_t length) {
 
 void Connection::getSucceeded (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response";
+    response_.Clear();
+    response_.set_token (config_.token);
+    response_.set_querystring (query_.querystring ());
+    
+    // HGETALL responds with an array the where even elements represent
+    // hash keys and odd elements represent values
+    // See also: http://redis.io/commands/hgetall
+    if (reply->type == REDIS_REPLY_ARRAYi && reply->elements > 0) {
+        // Indicate that we did in fact find a value
+        response_.set_success (true);
+        for (uint32_t j = 0; j < reply->elements; j += 2) {
+            auto val = response_.add_values();
+            val->set_type (reply->element[j]->str);
+            val->set_value (reply->element[j + 1]->str);
+        }
+    } else {
+        // Indicate a sad lack of values
+        response_.set_success (false);
+    }
     query_.Clear ();
-    read_size();
+    write_response (response_);
 }
 
 } // namespace server

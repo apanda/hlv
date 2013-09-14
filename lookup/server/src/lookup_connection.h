@@ -1,6 +1,5 @@
 // Copyright 20xx The Regents of the University of California
 // This is a test service for SDN-v2 High Level Virtualization
-#include <map>
 #include <memory>
 #include <boost/asio.hpp>
 #include <hiredis/hiredis.h>

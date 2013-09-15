@@ -28,12 +28,11 @@ class redisBoostClient
     void add_write(void *privdata);
     void del_write(void *privdata);
 	void cleanup(void *privdata);
+    void stop ();
 
   private:
-    void handle_signal ();
     redisAsyncContext *context_;
     boost::asio::ip::tcp::socket socket_;
-    boost::asio::signal_set signals_;
     bool read_requested_;
     bool write_requested_;
     bool read_in_progress_;

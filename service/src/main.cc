@@ -69,6 +69,17 @@ main (int argc, char* argv[]) {
         }
         proxy.stop ();
     }
+    boost::asio::signal_set signals (io_service);
+    signals.add (SIGINT);
+    signals.add (SIGTERM);
+#if defined(SIGQUIT)
+    signals.add (SIGQUIT);
+#endif
+    signals.async_wait ([&](boost::system::error_code, int) {
+        std::cout << "Quitting" << std::endl;
+        server.stop ();
+        io_service.stop ();
+    });
     // This thread now provides I/O service
     io_service.run();
     google::protobuf::ShutdownProtobufLibrary();

@@ -18,17 +18,9 @@ SyncClient::SyncClient (
         std::string rport) :
         io_service_ (io_service),
         socket_ (io_service_),
-        signals_ (io_service_),
         rhost_ (rhost),
         rport_ (rport) {
 
-    // Add the set of signals to listen for so that server can exit.
-    signals_.add(SIGINT);
-    signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-    signals_.add(SIGQUIT);
-#endif
-    handle_signal();
 }
 
 std::tuple<bool, const std::string>
@@ -112,16 +104,8 @@ bool SyncClient::connect () {
     return true;
 }
 
-void SyncClient::handle_signal () {
-    signals_.async_wait([this](boost::system::error_code, int) {
-        BOOST_LOG_TRIVIAL(info) << "Caught signal, closing client";
-        socket_.close();
-    });
-}
-
 void SyncClient::stop () {
     socket_.close();
-    signals_.cancel();
 }
 
 bool SyncClient::send_request (const hlv_service::ServiceRequest& request) {

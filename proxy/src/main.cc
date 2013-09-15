@@ -84,6 +84,17 @@ main (int argc, char* argv[]) {
     proxy.start();
     std::thread th (zmq_thread, saddr, sport, spport);
     th.detach();
+    boost::asio::signal_set signals (io_service);
+    signals.add (SIGINT);
+    signals.add (SIGTERM);
+#if defined(SIGQUIT)
+    signals.add (SIGQUIT);
+#endif
+    signals.async_wait ([this](boost::system::error_code, int) {
+        std::cout << "Quitting" << std::endl;
+        proxy.stop ();
+        io_service.stop ();
+    });
     // This thread now provides I/O service
     io_service.run();
     //std::string token;

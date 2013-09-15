@@ -50,9 +50,6 @@ class SyncClient
     void stop ();
 
   private:
-    // Handle signals
-    void handle_signal();
-
     // Send request to HLV server
     bool send_request (const hlv_service::ServiceRequest& request);
 
@@ -67,9 +64,6 @@ class SyncClient
 
     // A temporary variable that holds the amount to be read
     uint64_t bufferSize_;
-
-    // React to signals for shutdown etc
-    boost::asio::signal_set signals_;
 
     // Endpoint information
     std::string rhost_;

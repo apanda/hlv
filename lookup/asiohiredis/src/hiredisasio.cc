@@ -2,17 +2,8 @@
 
 namespace asio_redis {
 redisBoostClient::redisBoostClient(boost::asio::io_service& io_service,redisAsyncContext *ac)
-               : socket_ (io_service),
-                 signals_ (io_service)
+               : socket_ (io_service)
 {
-    // Add the set of signals to listen for so that server can exit.
-    signals_.add(SIGINT);
-    signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-    signals_.add(SIGQUIT);
-#endif
-    handle_signal();
-
 	/*this gives us access to c->fd*/
 	redisContext *c = &(ac->c);
 
@@ -42,11 +33,8 @@ redisBoostClient::redisBoostClient(boost::asio::io_service& io_service,redisAsyn
 	ac->data = this;
 }
 
-void redisBoostClient::handle_signal () {
-    signals_.async_wait([this](boost::system::error_code, int) {
-        BOOST_LOG_TRIVIAL(info) << "Caught signal, should kill REDIS";
-        socket_.close ();
-    });
+void redisBoostClient::stop () {
+    socket_.close ();
 }
 
 void redisBoostClient::operate()

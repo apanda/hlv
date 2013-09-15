@@ -45,9 +45,6 @@ class SyncProxy
     }
 
   private:
-    // Handle signals
-    void handle_signal();
-
     // Send request to HLV server
     bool send_register (const hlv_service::ProxyRegister& reg);
 
@@ -62,9 +59,6 @@ class SyncProxy
 
     // A temporary variable that holds the amount to be read
     uint64_t bufferSize_;
-
-    // React to signals for shutdown etc
-    boost::asio::signal_set signals_;
 
     // Endpoint information
     std::string phost_;

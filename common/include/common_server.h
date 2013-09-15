@@ -24,9 +24,6 @@ class Server {
   private:
     // I/O services for serving ASIO
     boost::asio::io_service& io_service_;
-
-    // React to signals for shutdown etc
-    boost::asio::signal_set signals_;
     
     // Listen to incoming connections
     boost::asio::ip::tcp::acceptor acceptor_;
@@ -50,17 +47,9 @@ class Server {
             const std::string& port, 
             ConnectionParameter services):
     io_service_(io_service),
-    signals_(io_service_),
     acceptor_(io_service_),
     socket_(io_service_),
     services_ (services) {
-        // Add the set of signals to listen for so that server can exit.
-        signals_.add(SIGINT);
-        signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-        signals_.add(SIGQUIT);
-#endif
-        handle_signal();
         boost::asio::ip::tcp::resolver resolver(io_service_);
         boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve({host, port});
         acceptor_.open(endpoint.protocol());
@@ -78,7 +67,6 @@ class Server {
     void stop () {
         acceptor_.close(); // Stop accepting connections
         manager_.stop_all();
-        signals_.cancel();
     }
 
     virtual ~Server () {
@@ -86,14 +74,6 @@ class Server {
     }
 
   private:
-    // Set things up so we quit when a signal is caught
-    void handle_signal () {
-        signals_.async_wait([this](boost::system::error_code, int) {
-            BOOST_LOG_TRIVIAL(info) << "Caught signal, closing acceptor";
-            stop ();
-        });
-    }
-
 
     // Set up callbacks for accepts
     void do_accept ()  {

@@ -18,26 +18,9 @@ SyncProxy::SyncProxy (
         std::string pport) :
         io_service_ (io_service),
         socket_ (io_service_),
-        signals_ (io_service_),
         phost_ (phost),
         pport_ (pport) {
 
-    // Add the set of signals to listen for so that server can exit.
-    signals_.add(SIGINT);
-    signals_.add(SIGTERM);
-#if defined(SIGQUIT)
-    signals_.add(SIGQUIT);
-#endif
-    handle_signal();
-}
-
-void SyncProxy::handle_signal () {
-    signals_.async_wait([this](boost::system::error_code ec, int) {
-        if (!ec) {
-            BOOST_LOG_TRIVIAL(info) << "Caught signal closing sync proxy";
-        }
-        socket_.close();
-    });
 }
 
 bool SyncProxy::connect () {
@@ -84,7 +67,6 @@ const int32_t SyncProxy::get_port () const {
 
 void SyncProxy::stop () {
     socket_.close();
-    signals_.cancel();
 }
 
 bool SyncProxy::send_register (const hlv_service::ProxyRegister& reg) {

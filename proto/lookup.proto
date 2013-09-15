@@ -7,14 +7,30 @@ message Query {
     required string QueryString = 2;
 };
 
+message Value {
+    required string Type = 1;
+    required string Value = 2;
+};
+
 // Query response
 message Response {
     required uint64 Token = 1; // Token to indicate service is authoritative
     required string QueryString = 2;
     required bool Success = 3;
-    message ResponseValue {
-        required string Type = 1;
-        required string Value = 2;
+    repeated Value Values = 4;
+};
+
+// Update request
+message Update {
+    enum UpdateType {
+        SET_VALUES = 0;
+        DELETE_TYPES = 1;
+        DELETE_KEY = 2;
+        SET_PERM = 3;
     };
-    repeated ResponseValue Values = 4;
+    required uint64 Token = 1;
+    required UpdateType Operation = 2;
+    repeated Value Values = 3;
+    optional string Key = 4;
+    optional uint64 Permission = 5;
 };

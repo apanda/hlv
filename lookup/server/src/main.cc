@@ -83,14 +83,14 @@ main (int argc, char* argv[]) {
 
     asio_redis::redisBoostClient client (io_service, context);
     // Server information
-    hlv::service::lookup::ConnectionInformation information 
+    hlv::service::lookup::server::ConnectionInformation information 
                                                     (0, 
                                                      redisAddress,
                                                      redisPort,
                                                      context,
                                                      prefix);
     // Create a lookup server            
-    hlv::service::lookup::Server lookup (
+    hlv::service::lookup::server::Server lookup (
             io_service,
             address,
             port,

@@ -12,6 +12,7 @@
 namespace hlv {
 namespace service{
 namespace lookup {
+namespace server {
 
 /// Information used by each of the connection objects for initialization.
 struct ConnectionInformation {
@@ -43,7 +44,7 @@ class Connection
     : public std::enable_shared_from_this<Connection>
 {
   private:
-    typedef std::shared_ptr<hlv::service::lookup::Connection> ConnectionPtr;
+    typedef std::shared_ptr<hlv::service::lookup::server::Connection> ConnectionPtr;
   public:
     Connection (const Connection&) = delete;
     Connection& operator=(const Connection&) = delete;
@@ -91,7 +92,8 @@ class Connection
     ev_lookup::Query query_;
     ev_lookup::Response response_;
 };
-} // namespace proxy
+} // namespace server
+} // namespace lookup
 } // namespace service
 } // namespace hlv
 #endif

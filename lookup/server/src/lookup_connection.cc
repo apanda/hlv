@@ -13,7 +13,8 @@
 
 namespace {
     void getCallback (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::Connection* connect = (hlv::service::lookup::Connection*)data;
+        hlv::service::lookup::server::Connection* connect = 
+                            (hlv::service::lookup::server::Connection*)data;
         redisReply* rreply = (redisReply*) reply;
         connect->getSucceeded (rreply);
     }
@@ -22,6 +23,7 @@ namespace {
 namespace hlv {
 namespace service{
 namespace lookup {
+namespace server {
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
                         ConnectionInformation& config) :
@@ -164,5 +166,6 @@ void Connection::getSucceeded (redisReply* reply) {
 }
 
 } // namespace server
+} // namespace lookup
 } // namespace service
 } // namespace hlv

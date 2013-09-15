@@ -16,9 +16,10 @@
 namespace hlv {
 namespace service {
 namespace lookup {
+namespace server {
 
 /// HLV lookup connection
-typedef std::shared_ptr<hlv::service::lookup::Connection> ConnectionPtr;
+typedef std::shared_ptr<hlv::service::lookup::server::Connection> ConnectionPtr;
 
 /// HLV lookup connection manager
 typedef hlv::service::common::ConnectionManager<ConnectionPtr> ConnectionManager;
@@ -28,7 +29,8 @@ typedef hlv::service::common::Server <Connection,
                                       ConnectionManager, 
                                       ConnectionInformation&>
                             Server;
-} // namespace proxy
+} // namespace server
+} // namespace lookup
 } // namespace service
 } // namespace hlv
 #endif

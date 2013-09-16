@@ -6,6 +6,7 @@
 #include <sstream>
 #include <cassert>
 #include <algorithm>
+#include <cstdio>
 #include <boost/log/trivial.hpp>
 #include "update_connection.h"
 #include "update_server.h"
@@ -115,20 +116,25 @@ void Connection::set_values (const ev_lookup::Update& update) {
         write_response (response_);
         return;
     }
-    std::stringstream types; 
-    for (auto kv : update.values() ) {
-        types << "\"" << kv.type() << "\" \"" 
-              << kv.value() << "\" " ;
+    std::vector<const char*> arguments (2 + 2 * update.values_size ());
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" << update.key ();
+    std::string key = keystream.str ();
+    const char** args = new const char*[2 + 2 * update.values_size ()];
+    size_t index = 0;
+    args [index++] = "hmset";
+    args [index++] = key.c_str ();
+    for (auto kv : update.values ()) {
+        args [index++] = kv.type ().c_str ();
+        args [index++] = kv.value().c_str ();
     }
-    std::string final (types.str());
-
-    redisAsyncCommand (config_.redisContext,
+    redisAsyncCommandArgv (config_.redisContext,
                        redisReflector,
                        this,
-                       "hmset \"%s:%s\" %s",
-                       config_.prefix.c_str(),
-                       update.key ().c_str(),
-                       final.c_str());
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
 }
 
 // Delete one or more types
@@ -140,19 +146,24 @@ void Connection::del_types (const ev_lookup::Update& update) {
         write_response (response_);
         return;
     }
-    std::stringstream types; 
-    for (auto kv : update.values() ) {
-        types << "\"" << kv.type() << "\" ";
+    std::vector<const char*> arguments (2 + update.values_size ());
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" << update.key ();
+    std::string key = keystream.str ();
+    const char** args = new const char*[2 +  update.values_size ()];
+    size_t index = 0;
+    args [index++] = "hdel";
+    args [index++] = key.c_str ();
+    for (auto kv : update.values ()) {
+        args [index++] = kv.type ().c_str ();
     }
-    std::string final (types.str());
-
-    redisAsyncCommand (config_.redisContext,
+    redisAsyncCommandArgv (config_.redisContext,
                        redisReflector,
                        this,
-                       "hdel \"%s:%s\" %s",
-                       config_.prefix.c_str(),
-                       update.key ().c_str(),
-                       final.c_str());
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
 }
 
 // Delete key
@@ -179,7 +190,7 @@ void Connection::set_perm (const ev_lookup::Update& update) {
     redisAsyncCommand (config_.redisContext,
                        redisReflector,
                        this,
-                       "HSET \"%s:%s\" \"%s\" \"%lld\"",
+                       "hset \"%s:%s\" \"%s\" \"%lld\"",
                        config_.prefix.c_str(),
                        update.key ().c_str (),
                        hlv::service::lookup::PERM_BIT_FIELD.c_str(),

@@ -1,0 +1,11 @@
+cmake_minimum_required (VERSION 2.8)
+project (EV_UPDATE_CLIENT_EXAMPLE)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-write-strings")
+include_directories(${EV_LOOKUP_UPDATE_LIB_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+file(GLOB update_client_sources . src/*.cc)
+file(GLOB update_client_csources . src/*.c)
+add_executable(update_client_mk1 ${update_client_sources} ${update_client_csources})
+target_link_libraries(update_client_mk1 ${Boost_LIBRARIES})
+target_link_libraries(update_client_mk1 update_client) 
+

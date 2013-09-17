@@ -147,6 +147,7 @@ int main (int argc, char* argv[]) {
                         lstring,
                         boost::escaped_list_separator<char> ('\\', ' ', '\"'));
         std::vector<std::string> split (tokenize.begin(), tokenize.end());
+        linenoise::linenoiseHistoryAdd (line);
         if (split[0] == std::string("quit")) {
             break;
         } else if (split[0] == std::string("set")) {

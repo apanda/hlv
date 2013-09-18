@@ -11,15 +11,15 @@ else()
     message(FATAL_ERROR "Hiredis not found")
 endif(LIBHIREDIS_FOUND)
 
-file(GLOB update_server_sources . src/*.cc)
-add_executable(update_server  
-    ${HLV_PROTO_LKP_SRC} ${HLV_PROTO_LKP_HDRS} ${update_server_sources})
-target_link_libraries(update_server ${PROTOBUF_LIBRARIES})
-target_link_libraries(update_server ${Boost_LIBRARIES})
-target_link_libraries(update_server ${LIBHIREDIS_LIBRARIES})
-target_link_libraries(update_server hiredis_asio) 
+file(GLOB coordinator_sources . src/*.cc)
+add_executable(coordinator  
+    ${HLV_PROTO_LKP_SRC} ${HLV_PROTO_LKP_HDRS} ${coordinator_sources})
+target_link_libraries(coordinator ${PROTOBUF_LIBRARIES})
+target_link_libraries(coordinator ${Boost_LIBRARIES})
+target_link_libraries(coordinator ${LIBHIREDIS_LIBRARIES})
+target_link_libraries(coordinator hiredis_asio) 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package (Threads)
-    target_link_libraries(update_server ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(coordinator ${CMAKE_THREAD_LIBS_INIT})
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 

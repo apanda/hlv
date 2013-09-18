@@ -1,0 +1,15 @@
+cmake_minimum_required (VERSION 2.8)
+project (EV_LOOKUP_ASYNC_LIB)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${EV_LOOKUP_ASYNC_LIB_SOURCE_DIR}/include)
+PROTOBUF_GENERATE_CPP(HLV_PROTO_LKP_SRC HLV_PROTO_LKP_HDRS ${EV_LOOKUP_SOURCE_DIR}/../proto/lookup.proto)
+file(GLOB async_lookup_client_sources . src/*.cc)
+add_library(async_lookup_client SHARED ${HLV_PROTO_LKP_SRC} 
+                ${HLV_PROTO_LKP_HDRS} ${async_lookup_client_sources})
+target_link_libraries(async_lookup_client ${PROTOBUF_LIBRARIES})
+target_link_libraries(async_lookup_client ${Boost_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    find_package (Threads)
+    target_link_libraries(async_lookup_client ${CMAKE_THREAD_LIBS_INIT})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+

@@ -1,0 +1,12 @@
+package ev_ebox;
+
+message LocalUpdate {
+    required uint64 Token = 1;
+    required string Key = 2;
+    repeated string values = 3;
+};
+
+message Response {
+    required uint64 Token = 1;
+    required bool Success = 2;
+};

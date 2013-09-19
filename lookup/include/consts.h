@@ -9,6 +9,7 @@ namespace lookup {
     const int32_t REDIS_PORT = 6379;
     const std::string REDIS_PREFIX = "ev";
     const std::string PERM_BIT_FIELD = "ev:perm_bits"; 
+    const std::string LOCAL_SET = "ev:local_set";
 }
 }
 }

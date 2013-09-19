@@ -13,17 +13,31 @@
 #include "consts.h"
 
 namespace {
-    void redisReflector (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::update::Connection* connect = 
-                            (hlv::service::lookup::update::Connection*)data;
+    void redisHashResponse (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::ebox::update::Connection* connect = 
+                            (hlv::service::ebox::update::Connection*)data;
         redisReply* rreply = (redisReply*) reply;
-        connect->redisResponse (rreply);
+        connect->hashReply (rreply);
+    }
+
+    void redisHashSetResponse (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::ebox::update::Connection* connect = 
+                            (hlv::service::ebox::update::Connection*)data;
+        redisReply* rreply = (redisReply*) reply;
+        connect->hashSetReply (rreply);
+    }
+
+    void redisSAddResponse (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::ebox::update::Connection* connect = 
+                            (hlv::service::ebox::update::Connection*)data;
+        redisReply* rreply = (redisReply*) reply;
+        connect->saddReply (rreply);
     }
 }
 
 namespace hlv {
 namespace service{
-namespace lookup {
+namespace ebox {
 namespace update {
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
@@ -43,7 +57,7 @@ void Connection::stop () {
     socket_.close();
 }
 
-void Connection::write_response (const ev_lookup::UpdateResponse& response) {
+void Connection::write_response (const ev_ebox::Response& response) {
     auto self(shared_from_this());
     uint64_t size = response.ByteSize ();
     *((uint64_t*)write_buffer_.data()) = size;
@@ -90,109 +104,48 @@ void Connection::read_size () {
             });
 }
 
-void Connection::execute_updates (const ev_lookup::Update& updates) {
-    switch (updates.operation ()) {
-        case ev_lookup::Update::SET_VALUES:
-            set_values (updates);
-            break;
-        case ev_lookup::Update::DELETE_TYPES:
-            del_types (updates);
-            break;
-        case ev_lookup::Update::DELETE_KEY:
-            del_key (updates);
-            break;
-        case ev_lookup::Update::SET_PERM:
-            set_perm (updates);
-            break;
+void Connection::update_set () {
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" 
+              << update_.key () 
+              << "." << hlv::service::lookup::LOCAL_SET;
+    std::string key = keystream.str ();
+    const char** args = new const char*[2 + update_.values_size ()];
+    size_t index = 0;
+    args [index++] = "sadd";
+    args [index++] = key.c_str ();
+    for (auto v: update_.values ()) {
+        args[index++] = v.c_str ();
     }
+
+    redisAsyncCommandArgv (config_.redisContext,
+                       redisSAddResponse,
+                       this,
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
 }
 
-// Set one or more values
-void Connection::set_values (const ev_lookup::Update& update) {
-    assert (update.operation () == ev_lookup::Update::SET_VALUES);
-    if (update.values_size() == 0) {
+void Connection::set_values () {
+    if (update_.values_size() == 0) {
         BOOST_LOG_TRIVIAL (info) << "Failing SET_VALUES due to lack of types";
         response_.set_success (false); 
         write_response (response_);
         return;
     }
-    std::stringstream keystream;
-    keystream << config_.prefix.c_str() << ":" << update.key ();
-    std::string key = keystream.str ();
-    const char** args = new const char*[2 + 2 * update.values_size ()];
-    size_t index = 0;
-    args [index++] = "hmset";
-    args [index++] = key.c_str ();
-    for (auto kv : update.values ()) {
-        args [index++] = kv.type ().c_str ();
-        args [index++] = kv.value().c_str ();
-    }
-    redisAsyncCommandArgv (config_.redisContext,
-                       redisReflector,
-                       this,
-                       index,
-                       args,
-                       NULL);
-    delete[] args;
+    get_permtoken ();
 }
 
-// Delete one or more types
-void Connection::del_types (const ev_lookup::Update& update) {
-    assert (update.operation () == ev_lookup::Update::DELETE_TYPES);
-    if (update.values_size() == 0) {
-        BOOST_LOG_TRIVIAL (info) << "Failing DELETE_TYPES due to lack of types";
-        response_.set_success (false); 
-        write_response (response_);
-        return;
-    }
-    std::stringstream keystream;
-    keystream << config_.prefix.c_str() << ":" << update.key ();
-    std::string key = keystream.str ();
-    const char** args = new const char*[2 +  update.values_size ()];
-    size_t index = 0;
-    args [index++] = "hdel";
-    args [index++] = key.c_str ();
-    for (auto kv : update.values ()) {
-        args [index++] = kv.type ().c_str ();
-    }
-    redisAsyncCommandArgv (config_.redisContext,
-                       redisReflector,
-                       this,
-                       index,
-                       args,
-                       NULL);
-    delete[] args;
-}
-
-// Delete key
-void Connection::del_key (const ev_lookup::Update& update) {
-    assert (update.operation () == ev_lookup::Update::DELETE_KEY);
-    redisAsyncCommand (config_.redisContext,
-                       redisReflector,
-                       this, 
-                       "del \"%s:%s\"",
-                       config_.prefix.c_str(),
-                       update.key ().c_str());
-}
-
-// Set permissions for key
-void Connection::set_perm (const ev_lookup::Update& update) {
-    assert (update.operation () == ev_lookup::Update::SET_PERM);
-    if (!update.has_permission ()) {
-        BOOST_LOG_TRIVIAL (info) << "Failing SET_PERM operation since no permissions specified";
-        response_.set_success (false);
-        write_response (response_);
-        return;
-    }
-
-    redisAsyncCommand (config_.redisContext,
-                       redisReflector,
-                       this,
-                       "hset \"%s:%s\" \"%s\" \"%lld\"",
-                       config_.prefix.c_str(),
-                       update.key ().c_str (),
-                       hlv::service::lookup::PERM_BIT_FIELD.c_str(),
-                       update.permission ());
+void Connection::get_permtoken () {
+    redisAsyncCommand (config_.redisContext, 
+                      redisHashResponse,
+                      this,
+                      "HGET %s:%s %s",
+                      config_.prefix.c_str (),
+                      update_.key ().c_str (),
+                      hlv::service::lookup::PERM_BIT_FIELD.c_str ());
+                        
 }
 
 void Connection::read_buffer (uint64_t length) {
@@ -211,7 +164,7 @@ void Connection::read_buffer (uint64_t length) {
                         manager_.stop(shared_from_this());
                         return;
                     }
-                    execute_updates (update_);
+                    //execute_updates (update_);
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
                     BOOST_LOG_TRIVIAL(info) << "Connection ended read: " << bytes_transfered;
@@ -224,14 +177,74 @@ void Connection::read_buffer (uint64_t length) {
             });
 }
 
-void Connection::redisResponse (redisReply* reply) {
-    BOOST_LOG_TRIVIAL (info) << "Got response";
-    response_.set_success (reply->type != REDIS_REPLY_ERROR);
+void Connection::fail_request () {
+    response_.set_success (false);
     update_.Clear ();
     write_response (response_);
 }
 
+void Connection::hashReply (redisReply* reply) {
+    BOOST_LOG_TRIVIAL (info) << "Got response to looking up PERM bits";
+    if (reply->type == REDIS_REPLY_ERROR) {
+        BOOST_LOG_TRIVIAL(error) << "Redis sent us an error, 'tis sad, fail";
+        fail_request ();
+    } else if (reply->type == REDIS_REPLY_NIL) {
+        BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, which is fine";
+        BOOST_LOG_TRIVIAL (info) << "Setting token to current token";
+        redisAsyncCommand (config_.redisContext,
+                           redisHashSetResponse,
+                           this,
+                           "HSETNX %s:%s %s %d",
+                           config_.prefix.c_str (),
+                           update_.key ().c_str (),
+                           update_.token ());
+    } else if (reply->type == REDIS_REPLY_STRING) {
+        uint64_t token = std::stoull (std::string(reply->str));
+        if (token != update_.token ()) {
+            // This is an implementation detail, should be more general, simpler this way for now
+            BOOST_LOG_TRIVIAL (info) << "Can only join a local lookup group with the same token, failing";
+            fail_request ();
+        } else {
+            update_set ();
+        }
+    } else {
+        BOOST_LOG_TRIVIAL (error) << "Redis's reply made no sense. The reply type was " << reply->type;
+        fail_request ();
+    }
+}
+
+void Connection::hashSetReply (redisReply* reply) {
+    BOOST_LOG_TRIVIAL (info) << "Got response from setting PERM bits";
+    if (reply->type == REDIS_REPLY_ERROR) {
+        BOOST_LOG_TRIVIAL(error) << "Redis sent us an error, 'tis sad, fail";
+        fail_request ();
+    } else if (reply->type == REDIS_REPLY_INTEGER) {
+        if (reply->integer == 1) {
+            update_set ();
+        } else {
+            // Someone beat us
+            BOOST_LOG_TRIVIAL (info) << "SETNX reports we lost the race";
+            // Get token and see what it is
+            get_permtoken ();
+        }
+    } else {
+        BOOST_LOG_TRIVIAL (error) << "Redis's reply made no sense. The reply type was " << reply->type;
+        fail_request ();
+    }
+}
+void Connection::saddReply (redisReply* reply) {
+    BOOST_LOG_TRIVIAL (info) << "Got response from SADD";
+    if (reply->type == REDIS_REPLY_ERROR) {
+        BOOST_LOG_TRIVIAL (error) << "Redis sent us an error";
+        fail_request ();
+    } else {
+        response_.set_success (false);
+        update_.Clear ();
+        write_response (response_);
+    }
+}
+
 } // namespace update
-} // namespace lookup
+} // namespace ebox
 } // namespace service
 } // namespace hlv

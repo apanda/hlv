@@ -67,12 +67,18 @@ class Connection
     // Callback for Redis sadd
     void saddReply (redisReply* reply);
 
+    // Callback for srem
+    void sremReply (redisReply* reply);
+
   private:
     // Process request in update_
-    void set_values ();
+    void process_request ();
 
     // Actually execute an SADD
     void update_set ();
+
+    // Execute SREM
+    void remove_from_set ();
 
     // Fail request
     inline void fail_request ();

@@ -1,9 +1,14 @@
 package ev_ebox;
 
 message LocalUpdate {
-    required uint64 Token = 1;
-    required string Key = 2;
-    repeated string values = 3;
+    enum Operation {
+        ADD = 1;
+        REMOVE = 2;
+    };
+    required Operation Type = 1;
+    required uint64 Token = 2;
+    required string Key = 3;
+    repeated string values = 4;
 };
 
 message Response {

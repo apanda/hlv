@@ -1,6 +1,7 @@
 // Copyright 20xx The Regents of the University of California
 // This is a test service for SDN-v2 High Level Virtualization
 #include <map>
+#include <list>
 #include <memory>
 #include <boost/asio.hpp>
 #ifndef __EV_QUERY_CLIENT_LIB__
@@ -17,6 +18,7 @@ namespace client {
 class EvLookupClient {
   public:
     typedef std::map<std::string, std::string> LookupResult;
+    typedef std::list<std::string> LocalLookup;
     // Delete no argument constructor
     EvLookupClient () = delete;
 
@@ -45,6 +47,17 @@ class EvLookupClient {
                 const std::string& query,
                 uint64_t& resultToken,
                 LookupResult& result) const;
+
+    /// Query EV lookup service
+    /// token: Authentication token
+    /// query: Query string
+    /// resultToken: Token sent back by server, can be used to authenticate 
+    ///              results
+    /// result: Map of results
+    bool LocalQuery (const uint64_t token,
+                     const std::string& query,
+                     uint64_t& resultToken,
+                     LocalLookup& result) const;
 
     virtual ~EvLookupClient();
 

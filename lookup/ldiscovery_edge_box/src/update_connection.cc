@@ -33,6 +33,13 @@ namespace {
         redisReply* rreply = (redisReply*) reply;
         connect->saddReply (rreply);
     }
+
+    void redisSRemResponse (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::ebox::update::Connection* connect = 
+                            (hlv::service::ebox::update::Connection*)data;
+        redisReply* rreply = (redisReply*) reply;
+        connect->sremReply (rreply);
+    }
 }
 
 namespace hlv {
@@ -73,7 +80,7 @@ void Connection::write_response (const ev_ebox::Response& response) {
                manager_.stop(shared_from_this());
            }
            BOOST_LOG_TRIVIAL (info) << "Successfully responded";
-            response_.Clear ();
+           response_.Clear ();
            read_size ();
         }
     );
@@ -104,6 +111,29 @@ void Connection::read_size () {
             });
 }
 
+void Connection::remove_from_set () {
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" 
+              << update_.key () 
+              << "." << hlv::service::lookup::LOCAL_SET;
+    std::string key = keystream.str ();
+    const char** args = new const char*[2 + update_.values_size ()];
+    size_t index = 0;
+    args [index++] = "srem";
+    args [index++] = key.c_str ();
+    for (auto v: update_.values ()) {
+        args[index++] = v.c_str ();
+    }
+
+    redisAsyncCommandArgv (config_.redisContext,
+                       redisSRemResponse,
+                       this,
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
+}
+
 void Connection::update_set () {
     std::stringstream keystream;
     keystream << config_.prefix.c_str() << ":" 
@@ -127,11 +157,10 @@ void Connection::update_set () {
     delete[] args;
 }
 
-void Connection::set_values () {
+void Connection::process_request () {
     if (update_.values_size() == 0) {
         BOOST_LOG_TRIVIAL (info) << "Failing SET_VALUES due to lack of types";
-        response_.set_success (false); 
-        write_response (response_);
+        fail_request ();
         return;
     }
     get_permtoken ();
@@ -164,6 +193,7 @@ void Connection::read_buffer (uint64_t length) {
                         manager_.stop(shared_from_this());
                         return;
                     }
+                    process_request ();
                     //execute_updates (update_);
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
@@ -178,6 +208,7 @@ void Connection::read_buffer (uint64_t length) {
 }
 
 void Connection::fail_request () {
+    response_.set_token (0);
     response_.set_success (false);
     update_.Clear ();
     write_response (response_);
@@ -189,15 +220,21 @@ void Connection::hashReply (redisReply* reply) {
         BOOST_LOG_TRIVIAL(error) << "Redis sent us an error, 'tis sad, fail";
         fail_request ();
     } else if (reply->type == REDIS_REPLY_NIL) {
-        BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, which is fine";
-        BOOST_LOG_TRIVIAL (info) << "Setting token to current token";
-        redisAsyncCommand (config_.redisContext,
-                           redisHashSetResponse,
-                           this,
-                           "HSETNX %s:%s %s %d",
-                           config_.prefix.c_str (),
-                           update_.key ().c_str (),
-                           update_.token ());
+        if (update_.type () == ev_ebox::LocalUpdate::ADD) {
+            BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, which is fine";
+            BOOST_LOG_TRIVIAL (info) << "Setting token to current token";
+            redisAsyncCommand (config_.redisContext,
+                               redisHashSetResponse,
+                               this,
+                               "HSETNX %s:%s %s %d",
+                               config_.prefix.c_str (),
+                               update_.key ().c_str (),
+                               hlv::service::lookup::PERM_BIT_FIELD.c_str (),
+                               update_.token ());
+        } else {
+            BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, can't really remove";
+            fail_request ();
+        }
     } else if (reply->type == REDIS_REPLY_STRING) {
         uint64_t token = std::stoull (std::string(reply->str));
         if (token != update_.token ()) {
@@ -205,7 +242,11 @@ void Connection::hashReply (redisReply* reply) {
             BOOST_LOG_TRIVIAL (info) << "Can only join a local lookup group with the same token, failing";
             fail_request ();
         } else {
-            update_set ();
+            if (update_.type () == ev_ebox::LocalUpdate::ADD) {
+                update_set ();
+            } else if (update_.type () == ev_ebox::LocalUpdate::REMOVE) {
+                remove_from_set (); 
+            }
         }
     } else {
         BOOST_LOG_TRIVIAL (error) << "Redis's reply made no sense. The reply type was " << reply->type;
@@ -238,9 +279,30 @@ void Connection::saddReply (redisReply* reply) {
         BOOST_LOG_TRIVIAL (error) << "Redis sent us an error";
         fail_request ();
     } else {
-        response_.set_success (false);
+        response_.set_token (0);
+        response_.set_success (true);
         update_.Clear ();
         write_response (response_);
+    }
+}
+void Connection::sremReply (redisReply* reply) {
+    BOOST_LOG_TRIVIAL (info) << "Got response from SREM";
+    if (reply->type == REDIS_REPLY_ERROR) {
+        BOOST_LOG_TRIVIAL (error) << "Redis sent us an error";
+        fail_request ();
+    } else if (reply->type == REDIS_REPLY_INTEGER) {
+        if (reply->integer > 0) {
+            response_.set_token (0);
+            response_.set_success (true);
+            update_.Clear ();
+            write_response (response_);
+        } else {
+            BOOST_LOG_TRIVIAL (info) << "No members found to delete";
+            fail_request ();
+        }
+    } else {
+        BOOST_LOG_TRIVIAL (info) << "Weird BOOST response";
+        fail_request ();
     }
 }
 

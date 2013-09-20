@@ -146,7 +146,7 @@ void Connection::getPermFieldSucceeded (redisReply* reply) {
         if (token == query_.token ()) {
             BOOST_LOG_TRIVIAL (info) << "Successfully authenticated local token, now "
                                     << "executing actual query ";
-            // TODO
+            lookup_local_set ();
         } else {
             BOOST_LOG_TRIVIAL (info) << "Looks like you are not allowed in here";
             fail_request ();
@@ -216,7 +216,7 @@ void Connection::read_buffer (uint64_t length) {
                     if (query_.type () == ev_lookup::Query::GLOBAL) {
                         global_lookup ();
                     } else if (query_.type() == ev_lookup::Query::LOCAL) {
-                        BOOST_LOG_TRIVIAL (error) << "Local lookup not yet implemented";
+                        local_lookup ();
                     }
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here

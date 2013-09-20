@@ -1,0 +1,15 @@
+cmake_minimum_required (VERSION 2.8)
+project (EV_LDISCOVERY_LIB)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${EV_LDISCOVERY_LIB_SOURCE_DIR}/include)
+PROTOBUF_GENERATE_CPP(HLV_PROTO_LKP_SRC HLV_PROTO_LKP_HDRS ${EV_LOOKUP_SOURCE_DIR}/../proto/ebox.proto)
+file(GLOB ldiscovery_lib_sources . src/*.cc)
+add_library(ldiscovery_lib SHARED ${HLV_PROTO_LKP_SRC} 
+                ${HLV_PROTO_LKP_HDRS} ${ldiscovery_lib_sources})
+target_link_libraries(ldiscovery_lib ${PROTOBUF_LIBRARIES})
+target_link_libraries(ldiscovery_lib ${Boost_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    find_package (Threads)
+    target_link_libraries(ldiscovery_lib ${CMAKE_THREAD_LIBS_INIT})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+

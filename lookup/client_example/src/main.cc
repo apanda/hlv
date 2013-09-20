@@ -1,5 +1,6 @@
 #include <iostream>
 #include <map>
+#include <list>
 #include <utility>
 #include <boost/program_options.hpp>
 #include <query_client.h>
@@ -14,9 +15,11 @@ int main (int argc, char* argv[]) {
                 query = "";
     uint64_t token = 0;
     uint32_t port = hlv::service::lookup::SERVER_PORT;
+    bool local = false;
 
     desc.add_options()
-        ("h, help", "Display help") 
+        ("h,help", "Display help") 
+        ("l,local", po::value<bool>(&local)->zero_tokens(), "Local lookup")
         ("s,server", po::value<std::string>(&server)->implicit_value("127.0.0.1"),
             "Lookup server to contact")
         ("p,port", po::value<uint32_t>(&port)->implicit_value(port),
@@ -55,19 +58,37 @@ int main (int argc, char* argv[]) {
         return 0;
     }
 
-    std::map<std::string, std::string> results;
     uint64_t rtoken;
-    bool qsuccess = client.Query (token,
+    bool qsuccess;
+    if (local) {
+        std::cerr << "Querying locally" << std::endl;
+        std::list<std::string> results;
+        qsuccess = client.LocalQuery (token,
+                                 query,
+                                 rtoken,
+                                 results);
+        if (!qsuccess) {
+            std::cerr << "Failed to query or no results found" << std::endl;
+            return 0;
+        }
+        std::cout << "Result token " << rtoken << std::endl;
+        for (auto val : results) {
+            std::cout << val << std::endl;
+        }
+    } else {
+        std::map<std::string, std::string> results;
+        qsuccess = client.Query (token,
                                query,
                                rtoken,
                                results);
-    if (!qsuccess) {
-        std::cerr << "Failed to query or no results found" << std::endl;
-        return 0;
-    }
-    std::cout << "Result token " << rtoken << std::endl;
-    for (auto kv : results) {
-        std::cout << "  " << kv.first << ":   " << kv.second << std::endl;
+        if (!qsuccess) {
+            std::cerr << "Failed to query or no results found" << std::endl;
+            return 0;
+        }
+        std::cout << "Result token " << rtoken << std::endl;
+        for (auto kv : results) {
+            std::cout << "  " << kv.first << ":   " << kv.second << std::endl;
+        }
     }
     std::cout << "Done" << std::endl;
     return 1;

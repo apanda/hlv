@@ -79,6 +79,45 @@ bool EvLookupClient::Query (const uint64_t token,
     return true;
 }
 
+/// Query EV lookup service
+/// token: Authentication token
+/// query: Query string
+/// resultToken: Token sent back by server, can be used to authenticate 
+///              results
+/// result: Map of results
+bool EvLookupClient::LocalQuery (const uint64_t token,
+                                 const std::string& query,
+                                 uint64_t& resultToken,
+                                 LocalLookup& result) const {
+    if (!connected_) {
+        return false;
+    }
+    query_->Clear ();
+    response_->Clear ();
+    query_->set_token (token);
+    query_->set_querystring (query);
+    query_->set_type (ev_lookup::Query::LOCAL);
+    bool success = send_query (*query_);
+    if (!success) {
+        return false;
+    }
+    success = recv_response (*response_);
+    if (!success) {
+        return false;
+    }
+    
+    if (!response_->success ()) {
+        return false;
+    }
+
+    resultToken = response_->token ();
+    for (auto kv : response_->values ()) {
+        // No emplace support :(
+        result.push_back (kv.value());
+    }
+    return true;
+}
+
 // Send a query to the server
 bool EvLookupClient::send_query (const ev_lookup::Query& query) const {
     uint64_t size = query.ByteSize ();

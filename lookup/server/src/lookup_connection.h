@@ -21,17 +21,20 @@ struct ConnectionInformation {
     uint32_t redisPort; // Port
     redisAsyncContext* redisContext;
     std::string prefix;
+    std::string localPrefix;
     ConnectionInformation(
             const uint64_t _token,
             const std::string& _redisServer,
             const uint32_t  _redisPort,
             redisAsyncContext* _redisContext,
-            std::string _prefix) :
+            std::string _prefix,
+            std::string _localPrefix) :
             token (_token),
             redisServer (_redisServer),
             redisPort (_redisPort),
             redisContext (_redisContext),
-            prefix (_prefix) {
+            prefix (_prefix),
+            localPrefix (_localPrefix) {
     }
 
 };
@@ -61,10 +64,27 @@ class Connection
     // Stop listening
     void stop ();
 
-    // Callback for Redis get
+    // Callback for Redis hgetall
     void getSucceeded (redisReply* reply);  
 
+    // Callback for getting PERM bits for local query
+    void getPermFieldSucceeded (redisReply* reply);
+    
+    // Callback for getting PERM bits for local query
+    void smemberSucceeded (redisReply* reply);
+
   private:
+    // Lookup set
+    void lookup_local_set ();
+
+    // Send failing response
+    void fail_request ();
+
+    // Global lookup
+    void global_lookup ();
+
+    // Local lookup
+    void local_lookup ();
 
     // Listen for buffer
     void read_size ();

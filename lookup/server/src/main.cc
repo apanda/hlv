@@ -44,7 +44,8 @@ main (int argc, char* argv[]) {
     std::string address = "0.0.0.0",
                 port    = std::to_string (hlv::service::lookup::SERVER_PORT),
                 redisAddress = "127.0.0.1",
-                prefix = hlv::service::lookup::REDIS_PREFIX;
+                prefix = hlv::service::lookup::REDIS_PREFIX,
+                lprefix;
     int32_t redisPort = hlv::service::lookup::REDIS_PORT;
     desc.add_options()
         ("help,h", "Display help")
@@ -53,7 +54,8 @@ main (int argc, char* argv[]) {
         ("raddress,r", po::value<std::string>(&redisAddress)->implicit_value("127.0.0.1"), "Redis server")
         ("rport", po::value<int32_t>(&redisPort)->implicit_value(6379), "Redis port")
         ("prefix", po::value<std::string>(&prefix)->implicit_value("ev"), 
-                   "Prefix for redis DB");
+                   "Prefix for redis DB")
+        ("lprefix,l", po::value<std::string>(&lprefix), "Local prefix to use for this lookup server");
     po::options_description options;
     options.add(desc);
     po::variables_map vm;
@@ -62,6 +64,12 @@ main (int argc, char* argv[]) {
     po::notify(vm);
 
     if (vm.count("help")) {
+        std::cerr << desc << std::endl;
+        return 0;
+    }
+
+    if (!vm.count ("lprefix")) {
+        std::cerr << "Cowardly failing to start without local prefix";
         std::cerr << desc << std::endl;
         return 0;
     }
@@ -88,7 +96,8 @@ main (int argc, char* argv[]) {
                                                      redisAddress,
                                                      redisPort,
                                                      context,
-                                                     prefix);
+                                                     prefix,
+                                                     lprefix);
     // Create a lookup server            
     hlv::service::lookup::server::Server lookup (
             io_service,

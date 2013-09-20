@@ -2,9 +2,14 @@ package ev_lookup;
 
 // Lookup query for service or other entity
 message Query {
+    enum QueryType {
+        GLOBAL = 1;
+        LOCAL = 2;
+    };
     // For now let us assume 64-bit perm fields as tokens
-    required uint64 Token = 1;
-    required string QueryString = 2;
+    required QueryType Type = 1;
+    required uint64 Token = 2;
+    required string QueryString = 3;
 };
 
 message Value {

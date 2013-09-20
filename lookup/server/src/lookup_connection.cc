@@ -18,6 +18,22 @@ namespace {
         redisReply* rreply = (redisReply*) reply;
         connect->getSucceeded (rreply);
     }
+
+    void localPermGetCallback (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::lookup::server::Connection* connect = 
+                            (hlv::service::lookup::server::Connection*)data;
+        redisReply* rreply = (redisReply*) reply;
+        connect->getPermFieldSucceeded (rreply);
+    }
+
+    void localSmemberCallback (redisAsyncContext* context, void* reply, void* data) {
+        hlv::service::lookup::server::Connection* connect = 
+                            (hlv::service::lookup::server::Connection*)data;
+        redisReply* rreply = (redisReply*) reply;
+        connect->smemberSucceeded (rreply);
+    }
+
+
 }
 
 namespace hlv {
@@ -88,6 +104,98 @@ void Connection::read_size () {
             });
 }
 
+void Connection::global_lookup () {
+    BOOST_LOG_TRIVIAL (info) << "Querying globally " 
+                             << config_.prefix 
+                             << ":"
+                             << query_.querystring ();
+    redisAsyncCommand (config_.redisContext, 
+                        getCallback, 
+                        this, 
+                        "HGETALL %s:%s", 
+                        config_.prefix.c_str(),
+                        query_.querystring ().c_str());  
+}
+
+void Connection::local_lookup () {
+    BOOST_LOG_TRIVIAL (info) << "Querying locally " 
+                             << config_.localPrefix 
+                             << ":"
+                             << query_.querystring ()
+                             << " " 
+                             << hlv::service::lookup::PERM_BIT_FIELD;
+    redisAsyncCommand (config_.redisContext, 
+                        localPermGetCallback, 
+                        this, 
+                        "HGET %s:%s %s", 
+                        config_.localPrefix.c_str(),
+                        query_.querystring ().c_str(),
+                        hlv::service::lookup::PERM_BIT_FIELD.c_str ());  
+}
+
+void Connection::getPermFieldSucceeded (redisReply* reply) {
+    BOOST_LOG_TRIVIAL (info) << "Got response to request for permissions";
+    if (reply->type == REDIS_REPLY_ERROR) {
+        BOOST_LOG_TRIVIAL (error) << "Redis sent us an error, 'tis sad, fail";
+        fail_request ();
+    } else if (reply->type == REDIS_REPLY_NIL) {
+        BOOST_LOG_TRIVIAL (info) << "Getting permissions field failed, failing";
+        fail_request ();
+    } else if (reply->type == REDIS_REPLY_STRING) {
+        uint64_t token = std::stoull(std::string(reply->str));
+        if (token == query_.token ()) {
+            BOOST_LOG_TRIVIAL (info) << "Successfully authenticated local token, now "
+                                    << "executing actual query ";
+            // TODO
+        } else {
+            BOOST_LOG_TRIVIAL (info) << "Looks like you are not allowed in here";
+            fail_request ();
+        }
+    } else {
+        BOOST_LOG_TRIVIAL (info) << "Unrecognized redis return type";
+        fail_request ();
+    }
+}
+
+void Connection::lookup_local_set () {
+    BOOST_LOG_TRIVIAL (info) << "Looking up local set"
+                             << config_.localPrefix
+                             << ":"
+                             << query_.querystring ()
+                             << "."
+                             <<  hlv::service::lookup::LOCAL_SET;
+    redisAsyncCommand (config_.redisContext,
+                       localSmemberCallback,
+                       this,
+                       "SMEMBERS %s:%s.%s",
+                       config_.localPrefix.c_str (),
+                       query_.querystring ().c_str (),
+                       hlv::service::lookup::LOCAL_SET.c_str ());
+}
+
+// Callback for getting PERM bits for local query
+void Connection::smemberSucceeded (redisReply* reply) {
+    response_.Clear();
+    response_.set_token (config_.token);
+    response_.set_querystring (query_.querystring ());
+    BOOST_LOG_TRIVIAL (info) << "smembers returned";
+    if (reply->type == REDIS_REPLY_ARRAY && reply->elements > 0) {
+        BOOST_LOG_TRIVIAL (info) << "SMEMBERS succeeded, converting to result";
+        // Indicate that we did in fact find a value
+        response_.set_success (true);
+        for (uint32_t j = 0; j < reply->elements; j ++) {
+            auto val = response_.add_values();
+            val->set_type ("");
+            val->set_value (reply->element[j]->str);
+        }
+    } else {
+        BOOST_LOG_TRIVIAL (info) << "SMEMBERS failed";
+        response_.set_success (false);
+    }
+    query_.Clear ();
+    write_response (response_);
+}
+
 void Connection::read_buffer (uint64_t length) {
     auto self(shared_from_this());
     BOOST_LOG_TRIVIAL(info) << "Being asked to read " << bufferSize_ << " bytes";
@@ -104,16 +212,12 @@ void Connection::read_buffer (uint64_t length) {
                         manager_.stop(shared_from_this());
                         return;
                     }
-                    BOOST_LOG_TRIVIAL (info) << "Querying " 
-                                             << config_.prefix 
-                                             << ":"
-                                             << query_.querystring ();
-                    redisAsyncCommand (config_.redisContext, 
-                                        getCallback, 
-                                        this, 
-                                        "HGETALL %s:%s", 
-                                        config_.prefix.c_str(),
-                                        query_.querystring ().c_str());  
+                    
+                    if (query_.type () == ev_lookup::Query::GLOBAL) {
+                        global_lookup ();
+                    } else if (query_.type() == ev_lookup::Query::LOCAL) {
+                        BOOST_LOG_TRIVIAL (error) << "Local lookup not yet implemented";
+                    }
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
                     BOOST_LOG_TRIVIAL(info) << "Connection ended read: " << bytes_transfered;
@@ -124,6 +228,15 @@ void Connection::read_buffer (uint64_t length) {
                     manager_.stop(shared_from_this());
                 }
             });
+}
+
+void Connection::fail_request () {
+    response_.Clear ();
+    response_.set_token (config_.token);
+    response_.set_querystring (query_.querystring ());
+    response_.set_success (false);
+    query_.Clear ();
+    write_response (response_);
 }
 
 void Connection::getSucceeded (redisReply* reply) {

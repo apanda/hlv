@@ -97,6 +97,7 @@ main (int argc, char* argv[]) {
                                                      redisPort,
                                                      context,
                                                      prefix);
+    BOOST_LOG_TRIVIAL (info) << "Using prefix as " << prefix;
     // Create an update server
     hlv::service::ebox::update::Server update (
             io_service,

@@ -57,6 +57,7 @@ bool EvLookupClient::Query (const uint64_t token,
     response_->Clear ();
     query_->set_token (token);
     query_->set_querystring (query);
+    query_->set_type (ev_lookup::Query::GLOBAL);
     bool success = send_query (*query_);
     if (!success) {
         return false;

@@ -14,8 +14,8 @@
 
 namespace {
     void redisReflector (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::update::Connection* connect = 
-                            (hlv::service::lookup::update::Connection*)data;
+        auto connect = 
+                      (hlv::service::lookup::update::Connection*)data;
         redisReply* rreply = (redisReply*) reply;
         connect->redisResponse (rreply);
     }
@@ -187,7 +187,7 @@ void Connection::set_perm (const ev_lookup::Update& update) {
 
     redisAsyncCommand (config_.redisContext,
                        redisReflector,
-                       this,
+                       this, 
                        "hset \"%s:%s\" \"%s\" \"%lld\"",
                        config_.prefix.c_str(),
                        update.key ().c_str (),

@@ -13,6 +13,7 @@ namespace lookup {
     const std::string LOCAL_SET = "ev:local_set";
     const int32_t AUTH_PORT = 8087;
     const std::string AUTH_LOCATION = "auth";
+    const std::string LDEBOX_LOCATION = "ev:ebox";
 }
 }
 }

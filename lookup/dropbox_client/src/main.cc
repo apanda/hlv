@@ -1,3 +1,5 @@
+// Copyright 20xx The Regents of the University of California
+// This is a test service for SDN-v2 High Level Virtualization
 #include <iostream>
 #include <string>
 #include <boost/program_options.hpp>

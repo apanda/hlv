@@ -4,6 +4,7 @@
 #include <memory>
 #include <thread>
 #include <tuple>
+#include <sstream>
 #include <signal.h>
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
@@ -11,6 +12,7 @@
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include <hiredisasio.h>
+#include <getifaddr.h>
 #include "consts.h"
 #include "logging_common.h"
 #include "update_server.h"
@@ -72,6 +74,54 @@ main (int argc, char* argv[]) {
         return 0;
     }
 
+    // Register this box with lookup
+    std::string registerAddress = address;
+    if (registerAddress == "0.0.0.0") {
+        bool asuccess = getFirstNonLoopbackAddress (registerAddress);
+        if (!asuccess) {
+            std::cerr << "Could not find address to register " << std::endl;
+            return 0;
+        }
+    }
+
+    redisContext *syncContext = redisConnect (redisAddress.c_str (), redisPort);
+    if (syncContext == NULL) {
+        std::cerr << "Failed to allocate a context for initial registeration" << std::endl;
+        return 0;
+    }
+    if (syncContext != NULL && syncContext->err) {
+        std::cerr << "Error connecting to redis " <<  syncContext->errstr;
+        return 0;
+    }
+    
+    redisReply* syncReply;
+    syncReply = (redisReply*) redisCommand(syncContext, 
+                                           "HSET %s:%s %s 0",   
+                                           prefix.c_str (),
+                                           hlv::service::lookup::LDEBOX_LOCATION.c_str (),
+                                           hlv::service::lookup::PERM_BIT_FIELD.c_str ());
+    if (!syncReply) {
+        std::cerr << "Error updating permissions on lookup " << syncContext->errstr << std::endl;
+        return 0;
+    }
+
+    freeReplyObject (syncReply);
+    
+    std::stringstream location;
+    location << registerAddress << ":" << port;
+    syncReply = (redisReply*) redisCommand (syncContext,
+                                            "sadd %s:%s.%s %s",
+                                             prefix.c_str (),
+                                             hlv::service::lookup::LDEBOX_LOCATION.c_str (),
+                                             hlv::service::lookup::LOCAL_SET.c_str (),
+                                             location.str ().c_str ());
+    if (!syncReply) {
+        std::cerr << "Error adding edge box to set of edge boxes " << syncContext->errstr << std::endl;
+        return 0;
+    }
+    freeReplyObject (syncReply);
+    redisFree (syncContext);
+
     // Connect to Redis
     redisAsyncContext *context = redisAsyncConnect (redisAddress.c_str(), redisPort);
     if (!context) {
@@ -80,7 +130,7 @@ main (int argc, char* argv[]) {
     }
 
     if (context->err) {
-        std::cerr << "Failed to connect to redis instance " << context->errstr << std::endl;
+        std::cerr << "Failed to connect to redis instance " << syncContext->errstr << std::endl;
         return 0;
     }  
 
@@ -121,7 +171,29 @@ main (int argc, char* argv[]) {
     // This thread now provides I/O service
     io_service.run();
     redisAsyncDisconnect (context);
+
+    syncContext = redisConnect (redisAddress.c_str (), redisPort);
+    if (syncContext == NULL) {
+        std::cerr << "Failed to allocate a context for deregistration" << std::endl;
+        return 0;
+    }
+    if (syncContext != NULL && syncContext->err) {
+        std::cerr << "Error connecting to redis " <<  syncContext->errstr;
+        return 0;
+    }
+    syncReply = (redisReply*) redisCommand (syncContext,
+                                            "srem %s:%s.%s %s",
+                                             prefix.c_str (),
+                                             hlv::service::lookup::LDEBOX_LOCATION.c_str (),
+                                             hlv::service::lookup::LOCAL_SET.c_str (),
+                                             location.str ().c_str ());
+    if (!syncReply) {
+        std::cerr << "Error removing edge box from set of edge boxes " << syncContext->errstr << std::endl;
+        return 0;
+    }
+    freeReplyObject (syncReply);
+    redisFree (syncContext);
     google::protobuf::ShutdownProtobufLibrary();
-    return 0;
+    return 1;
 
 }

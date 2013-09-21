@@ -7,6 +7,7 @@ include_directories(${EV_LDISCOVERY_LIB_SOURCE_DIR}/include)
 include_directories(${HLV_LOOKUP_CLIENT_LIB_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${AUTH_SERVICE_SOURCE_DIR}/../common/include)
+include_directories(${EV_MISC_SOURCE_DIR}/include)
 file(GLOB dropbox_client_sources . src/*.cc)
 file(GLOB dropbox_client_csources . src/*.c)
 file(GLOB hlv_common_sources . ../../common/src/*.cc)
@@ -18,4 +19,4 @@ add_executable(dropbox_client_mk1 ${dropbox_client_sources}
 target_link_libraries(dropbox_client_mk1 ${Boost_LIBRARIES})
 target_link_libraries(dropbox_client_mk1 ldiscovery_lib) 
 target_link_libraries(dropbox_client_mk1 lookup_client) 
-
+target_link_libraries(dropbox_client_mk1  ev_misc)

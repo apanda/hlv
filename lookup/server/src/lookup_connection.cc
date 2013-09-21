@@ -143,7 +143,7 @@ void Connection::getPermFieldSucceeded (redisReply* reply) {
         fail_request ();
     } else if (reply->type == REDIS_REPLY_STRING) {
         uint64_t token = std::stoull(std::string(reply->str));
-        if (token == query_.token ()) {
+        if (token == query_.token () || token == 0) {
             BOOST_LOG_TRIVIAL (info) << "Successfully authenticated local token, now "
                                     << "executing actual query ";
             lookup_local_set ();

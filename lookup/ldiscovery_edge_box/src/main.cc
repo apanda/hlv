@@ -42,7 +42,7 @@ main (int argc, char* argv[]) {
     // Argument parsing
     po::options_description desc("Update service options");
     std::string address = "0.0.0.0",
-                port    = std::to_string (hlv::service::lookup::UPDATE_PORT),
+                port    = std::to_string (hlv::service::lookup::EBOX_PORT),
                 redisAddress = "127.0.0.1",
                 prefix = hlv::service::lookup::REDIS_PREFIX;
     int32_t redisPort = hlv::service::lookup::REDIS_PORT;

@@ -64,7 +64,6 @@ main (int argc, char* argv[]) {
     proxy.connect();
     BOOST_LOG_TRIVIAL(info) << "Using remote " << proxy.get_server() << ":" << proxy.get_port();
     hlv::service::client::SyncClient client (
-            io_service,
             proxy.get_server(),
             std::to_string (proxy.get_port()));
     server.start();

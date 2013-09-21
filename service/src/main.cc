@@ -84,5 +84,4 @@ main (int argc, char* argv[]) {
     io_service.run();
     google::protobuf::ShutdownProtobufLibrary();
     return 0;
-
 }

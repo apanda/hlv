@@ -12,15 +12,13 @@ namespace hlv {
 namespace service{
 namespace client {
 
-SyncClient::SyncClient (
-        boost::asio::io_service& io_service,
-        std::string rhost, 
-        std::string rport) :
-        io_service_ (io_service),
-        socket_ (io_service_),
-        rhost_ (rhost),
-        rport_ (rport) {
-
+// Construct one
+SyncClient::SyncClient (std::string rhost, 
+                std::string rport):
+            io_service_ (),
+            socket_ (io_service_),
+            rhost_ (rhost),
+            rport_ (rport) {
 }
 
 std::tuple<bool, const std::string>
@@ -49,7 +47,6 @@ SyncClient::authenticate (const std::string& identity,
         return std::make_tuple(false, "");
     }
     token_ = response_.response(); 
-    BOOST_LOG_TRIVIAL(info) << "Successfully authenticated, token is " << token_;
     return std::make_tuple(true, token_);
 }
 

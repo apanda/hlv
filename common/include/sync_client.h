@@ -20,10 +20,9 @@ class SyncClient
     SyncClient& operator= (const SyncClient&) = delete;
     
     // Construct one
-    SyncClient ( boost::asio::io_service& io_service,
-            std::string rhost, 
-            std::string rport);
-    
+    SyncClient (std::string rhost, 
+                std::string rport);
+
     virtual ~SyncClient () {
         stop ();
     }
@@ -57,7 +56,7 @@ class SyncClient
     bool receive_response ();
     
     // IO service provider
-    boost::asio::io_service& io_service_;
+    boost::asio::io_service io_service_;
 
     // Socket to server
     boost::asio::ip::tcp::socket socket_;

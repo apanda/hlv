@@ -1,3 +1,5 @@
+// Copyright 20xx The Regents of the University of California
+// This is a test service for SDN-v2 High Level Virtualization
 #include <iostream>
 #include <memory>
 #include <string>
@@ -7,7 +9,7 @@
 #include "server.h"
 #include "logging_common.h"
 #include "service.pb.h"
-#include "simple_service.h"
+#include "auth_service.h"
 #include "getifaddr.h"
 #include "consts.h"
 
@@ -72,7 +74,7 @@ main (int argc, char* argv[]) {
             io_service,
             saddr, 
             sport, 
-            std::make_shared<hlv::service::server::SimpleService>());
+            std::make_shared<hlv::service::server::AuthService>());
     server.start();
 
     boost::asio::signal_set signals (io_service);

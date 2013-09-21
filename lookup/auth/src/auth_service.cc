@@ -10,7 +10,7 @@
 #else
 #include <openssl/sha.h>
 #endif
-#include "simple_service.h"
+#include "auth_service.h"
 
 namespace {
 std::string sha256(const std::string str)
@@ -27,7 +27,7 @@ std::string sha256(const std::string str)
 namespace hlv {
 namespace service {
 namespace server {
-bool SimpleService::AuthenticateToken (const int64_t requestID,
+bool AuthService::AuthenticateToken (const int64_t requestID,
                     const std::string& identity, 
                     const std::string& token, 
                     hlv_service::ServiceResponse& response) {
@@ -39,7 +39,7 @@ bool SimpleService::AuthenticateToken (const int64_t requestID,
     return true;
 }
 
-bool SimpleService::ProcessRequest (const int64_t requestID,
+bool AuthService::ProcessRequest (const int64_t requestID,
                         const hlv_service::ServiceRequest& request, 
                         hlv_service::ServiceResponse& response) {
     assert (request.msgtype () == hlv_service::ServiceRequest_RequestType_REQUEST);

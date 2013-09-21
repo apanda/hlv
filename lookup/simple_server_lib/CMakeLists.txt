@@ -1,0 +1,11 @@
+cmake_minimum_required (VERSION 2.8)
+project (EV_SIMPLE_SERVER)
+include_directories(${EV_SIMPLE_SERVER_SOURCE_DIR}/include)
+file(GLOB simple_sources . src/*.cc)
+add_library(ev_simple SHARED ${simple_sources})
+target_link_libraries(ev_simple ${Boost_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    find_package (Threads)
+    target_link_libraries(ev_simple ${CMAKE_THREAD_LIBS_INIT})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+

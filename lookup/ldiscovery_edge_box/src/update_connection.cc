@@ -111,72 +111,6 @@ void Connection::read_size () {
             });
 }
 
-void Connection::remove_from_set () {
-    std::stringstream keystream;
-    keystream << config_.prefix.c_str() << ":" 
-              << update_.key () 
-              << "." << hlv::service::lookup::LOCAL_SET;
-    std::string key = keystream.str ();
-    const char** args = new const char*[2 + update_.values_size ()];
-    size_t index = 0;
-    args [index++] = "srem";
-    args [index++] = key.c_str ();
-    for (auto v: update_.values ()) {
-        args[index++] = v.c_str ();
-    }
-
-    redisAsyncCommandArgv (config_.redisContext,
-                       redisSRemResponse,
-                       this,
-                       index,
-                       args,
-                       NULL);
-    delete[] args;
-}
-
-void Connection::update_set () {
-    std::stringstream keystream;
-    keystream << config_.prefix.c_str() << ":" 
-              << update_.key () 
-              << "." << hlv::service::lookup::LOCAL_SET;
-    std::string key = keystream.str ();
-    const char** args = new const char*[2 + update_.values_size ()];
-    size_t index = 0;
-    args [index++] = "sadd";
-    args [index++] = key.c_str ();
-    for (auto v: update_.values ()) {
-        args[index++] = v.c_str ();
-    }
-
-    redisAsyncCommandArgv (config_.redisContext,
-                       redisSAddResponse,
-                       this,
-                       index,
-                       args,
-                       NULL);
-    delete[] args;
-}
-
-void Connection::process_request () {
-    if (update_.values_size() == 0) {
-        BOOST_LOG_TRIVIAL (info) << "Failing SET_VALUES due to lack of types";
-        fail_request ();
-        return;
-    }
-    get_permtoken ();
-}
-
-void Connection::get_permtoken () {
-    redisAsyncCommand (config_.redisContext, 
-                      redisHashResponse,
-                      this,
-                      "HGET %s:%s %s",
-                      config_.prefix.c_str (),
-                      update_.key ().c_str (),
-                      hlv::service::lookup::PERM_BIT_FIELD.c_str ());
-                        
-}
-
 void Connection::read_buffer (uint64_t length) {
     auto self(shared_from_this());
     BOOST_LOG_TRIVIAL(info) << "Being asked to read " << bufferSize_ << " bytes";
@@ -207,14 +141,32 @@ void Connection::read_buffer (uint64_t length) {
             });
 }
 
-void Connection::fail_request () {
-    response_.set_token (0);
-    response_.set_success (false);
-    update_.Clear ();
-    write_response (response_);
+void Connection::process_request () {
+    if (update_.values_size() == 0) {
+        BOOST_LOG_TRIVIAL (info) << "Failing SET_VALUES due to lack of types";
+        fail_request ();
+        return;
+    }
+    // Step 1 for either add or remove get permissions
+    // The flow is
+    // get_permtoken -> hashReply (perm found) -> hashSetReply (set perm?) ->
+    // {update_set -> saddReply} (add to set) or {remove_from_set ->  sremReply} (remove from set)
+    get_permtoken ();
+}
+
+void Connection::get_permtoken () {
+    redisAsyncCommand (config_.redisContext, 
+                      redisHashResponse,
+                      this,
+                      "HGET %s:%s %s",
+                      config_.prefix.c_str (),
+                      update_.key ().c_str (),
+                      hlv::service::lookup::PERM_BIT_FIELD.c_str ());
+                        
 }
 
 void Connection::hashReply (redisReply* reply) {
+    // Called back in here when PERM tokens are gotten
     BOOST_LOG_TRIVIAL (info) << "Got response to looking up PERM bits";
     if (reply->type == REDIS_REPLY_ERROR) {
         BOOST_LOG_TRIVIAL(error) << "Redis sent us an error, 'tis sad, fail";
@@ -222,11 +174,11 @@ void Connection::hashReply (redisReply* reply) {
     } else if (reply->type == REDIS_REPLY_NIL) {
         if (update_.type () == ev_ebox::LocalUpdate::ADD) {
             BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, which is fine";
-            BOOST_LOG_TRIVIAL (info) << "Setting token to current token";
+            BOOST_LOG_TRIVIAL (info) << "Setting token to current token " << update_.token ();
             redisAsyncCommand (config_.redisContext,
                                redisHashSetResponse,
                                this,
-                               "HSETNX %s:%s %s %d",
+                               "HSETNX %s:%s %s %llu",
                                config_.prefix.c_str (),
                                update_.key ().c_str (),
                                hlv::service::lookup::PERM_BIT_FIELD.c_str (),
@@ -239,7 +191,8 @@ void Connection::hashReply (redisReply* reply) {
         uint64_t token = std::stoull (std::string(reply->str));
         if (token != update_.token ()) {
             // This is an implementation detail, should be more general, simpler this way for now
-            BOOST_LOG_TRIVIAL (info) << "Can only join a local lookup group with the same token, failing";
+            BOOST_LOG_TRIVIAL (info) << "Can only join a local lookup group with the same token, failing"
+                                    << "token = " << token << " given " << update_.token ();
             fail_request ();
         } else {
             if (update_.type () == ev_ebox::LocalUpdate::ADD) {
@@ -273,6 +226,31 @@ void Connection::hashSetReply (redisReply* reply) {
         fail_request ();
     }
 }
+
+void Connection::update_set () {
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" 
+              << update_.key () 
+              << "." << hlv::service::lookup::LOCAL_SET;
+    std::string key = keystream.str ();
+    BOOST_LOG_TRIVIAL (info) << "Adding to " << key; 
+    const char** args = new const char*[2 + update_.values_size ()];
+    size_t index = 0;
+    args [index++] = "sadd";
+    args [index++] = key.c_str ();
+    for (auto v: update_.values ()) {
+        args[index++] = v.c_str ();
+    }
+
+    redisAsyncCommandArgv (config_.redisContext,
+                       redisSAddResponse,
+                       this,
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
+}
+
 void Connection::saddReply (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response from SADD";
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -285,6 +263,31 @@ void Connection::saddReply (redisReply* reply) {
         write_response (response_);
     }
 }
+
+void Connection::remove_from_set () {
+    std::stringstream keystream;
+    keystream << config_.prefix.c_str() << ":" 
+              << update_.key () 
+              << "." << hlv::service::lookup::LOCAL_SET;
+    std::string key = keystream.str ();
+    BOOST_LOG_TRIVIAL (info) << "Removing from " << key; 
+    const char** args = new const char*[2 + update_.values_size ()];
+    size_t index = 0;
+    args [index++] = "srem";
+    args [index++] = key.c_str ();
+    for (auto v: update_.values ()) {
+        args[index++] = v.c_str ();
+    }
+
+    redisAsyncCommandArgv (config_.redisContext,
+                       redisSRemResponse,
+                       this,
+                       index,
+                       args,
+                       NULL);
+    delete[] args;
+}
+
 void Connection::sremReply (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response from SREM";
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -305,6 +308,14 @@ void Connection::sremReply (redisReply* reply) {
         fail_request ();
     }
 }
+
+void Connection::fail_request () {
+    response_.set_token (0);
+    response_.set_success (false);
+    update_.Clear ();
+    write_response (response_);
+}
+
 
 } // namespace update
 } // namespace ebox

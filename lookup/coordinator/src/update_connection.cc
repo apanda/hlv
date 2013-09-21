@@ -170,7 +170,7 @@ void Connection::del_key (const ev_lookup::Update& update) {
     redisAsyncCommand (config_.redisContext,
                        redisReflector,
                        this, 
-                       "del \"%s:%s\"",
+                       "del %s:%s",
                        config_.prefix.c_str(),
                        update.key ().c_str());
 }
@@ -188,7 +188,7 @@ void Connection::set_perm (const ev_lookup::Update& update) {
     redisAsyncCommand (config_.redisContext,
                        redisReflector,
                        this, 
-                       "hset \"%s:%s\" \"%s\" \"%lld\"",
+                       "hset %s:%s %s %llu",
                        config_.prefix.c_str(),
                        update.key ().c_str (),
                        hlv::service::lookup::PERM_BIT_FIELD.c_str(),

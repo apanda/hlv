@@ -12,9 +12,9 @@ namespace server {
 // A very simple service module that supports authentication. In this case all
 // authentication tokens are accepted, and the authorization token returned is a
 // hash of the identity.
-class SimpleService : public ServiceInterface {
+class AuthService : public ServiceInterface {
   public:
-    SimpleService () {}
+    AuthService () {}
     // Check an authentication token to see if a client can indeed own an
     // identity.  Generates a response which among other things contains the
     // authorization token that should be used in all subsequent requests.

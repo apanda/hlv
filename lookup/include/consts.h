@@ -14,6 +14,7 @@ namespace lookup {
     const int32_t AUTH_PORT = 8087;
     const std::string AUTH_LOCATION = "auth";
     const std::string LDEBOX_LOCATION = "ev:ebox";
+    const std::string PROVIDER_LOCATION = "ev:provider";
 }
 }
 }

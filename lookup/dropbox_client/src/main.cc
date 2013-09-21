@@ -142,7 +142,8 @@ int main (int argc, char* argv[]) {
     token = authenticate (lookupClient, name, uname, password);
 
     std::cerr << "Got token " << token << std::endl;
-
+    
+    // Discover address
     std::string address;
     bool asuccess = getFirstNonLoopbackAddress (address);
     if (asuccess) {
@@ -154,16 +155,21 @@ int main (int argc, char* argv[]) {
     std::stringstream addressStr;
     addressStr << address << ":" << port;
     std::string regAddress = addressStr.str ();
+
+    // Discover edge box
     auto client = discoverEdgeBox (lookupClient, token); 
     if (!client) {
         std::cerr << "Failed to discover edge box " << std::endl;
         return 1;
     }
+
+    // Connect to edge box
     bool conned = client->connect ();
     if (!conned) {
         std::cerr << "Failed to connect to edgebox " << std::endl;
         return 1;
     }
+
     // Listen for connections
     boost::asio::io_service io_service;
     hlv::service::simple::server::ConnectionInformation info;
@@ -176,6 +182,8 @@ int main (int argc, char* argv[]) {
         // This thread now provides I/O service
         io_service.run();
     });
+
+    // Register with edge box
     std::list<std::string> changes = {regAddress};
     std::stringstream domainkeystr;
     domainkeystr << uname << "." << name;
@@ -185,6 +193,8 @@ int main (int argc, char* argv[]) {
         std::cerr << "Failed to register" << std::endl;
         return 0;
     }
+
+    // Run
     std::cerr << "Running dropbox " << std::endl;
     std::cin.ignore ();
     succ = client->del_values (domainkey, changes);

@@ -14,7 +14,6 @@ void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
         case 'q':
             linenoise::linenoiseAddCompletion (lc, "quit");
             break;
-            break;
         case 's':
             linenoise::linenoiseAddCompletion (lc, "set");
             linenoise::linenoiseAddCompletion (lc, "set_perm");

@@ -68,7 +68,7 @@ void Connection::read_buffer (uint64_t length) {
                 BOOST_LOG_TRIVIAL(info) << "Read data";
                 if (!ec) {
                     std::string data (buffer_.data (), bytes_transfered);
-                    std::cout << data;
+                    std::cout << data << std::endl;
                 } else if (ec != boost::asio::error::operation_aborted) {
                     // Stop here
                     BOOST_LOG_TRIVIAL(info) << "Connection ended read: " << bytes_transfered;

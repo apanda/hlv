@@ -6,16 +6,34 @@
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
 #include <query_client.h>
 #include <update_client.h>
 #include <sync_client.h>
 #include <logging_common.h>
 #include <simple_server.h>
 #include <simple_client.h>
+#include <linenoise.h>
 #include "consts.h"
 #include "getifaddr.h"
 
 namespace po = boost::program_options;
+
+void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
+    switch (buf[0]) {
+        case 'q':
+            linenoise::linenoiseAddCompletion (lc, "quit");
+            break;
+        case 's':
+            linenoise::linenoiseAddCompletion (lc, "send_serv");
+            linenoise::linenoiseAddCompletion (lc, "send_all");
+            break;
+        case 'h':
+            linenoise::linenoiseAddCompletion (lc, "help");
+            break;
+    }
+}
+
 uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
                        const std::string& name,
                        const std::string& uname,
@@ -203,11 +221,64 @@ int main (int argc, char* argv[]) {
                                         domainkey, 
                                         token,
                                         lookupClient);
-    succ = dclient.send_everywhere ("Hello\n");
-    if (!succ) {
-        std::cerr << "Failed to send" << std::endl;
+    const int32_t HISTORY_LEN = 1000;
+    linenoise::linenoiseSetCompletionCallback (completion);
+    linenoise::linenoiseHistorySetMaxLen (HISTORY_LEN);
+    char* line;
+    while (true) {
+        line = linenoise::linenoise("client> ");
+        if (line == NULL) {
+            continue;
+        }
+        std::string lstring = std::string(line);
+        boost::tokenizer<boost::escaped_list_separator<char>> tokenize(
+                        lstring,
+                        boost::escaped_list_separator<char> ('\\', ' ', '\"'));
+        std::vector<std::string> split (tokenize.begin(), tokenize.end());
+        linenoise::linenoiseHistoryAdd (line);
+        if (split.size() == 0) {
+            continue;
+        }
+        if (split[0] == std::string("quit")) {
+            break;
+        } else if (split[0] == std::string("send_serv")) {
+            if (split.size () != 2) {
+                std::cerr << "send_serv [service] <msg>" << std::endl;
+            } else if (split.size () == 3) {
+                succ = dclient.send_to_servers (split[1], split[2]);
+                if (!succ) {
+                    std::cerr << "Failed to send" << std::endl;
+                }
+            } else{
+                succ = dclient.send_to_servers (split[1]);
+                if (!succ) {
+                    std::cerr << "Failed to send" << std::endl;
+                }
+            }
+        } else if (split[0] == std::string("send_all")) {
+            if (split.size () != 2) {
+                std::cerr << "send_all [service] <msg>" << std::endl;
+                
+            }  else if (split.size () == 3) {
+                succ = dclient.send_everywhere (split[1], split[2]);
+                if (!succ) {
+                    std::cerr << "Failed to send" << std::endl;
+                }
+            }
+            else {
+                succ = dclient.send_everywhere (split[1]);
+                if (!succ) {
+                    std::cerr << "Failed to send" << std::endl;
+                }
+            }
+        } else {
+            std::cerr << "Available commands " << std::endl;
+            std::cerr << "send_serv [service] <msg> " << std::endl;
+            std::cerr << "send_all [service] <msg> " << std::endl;
+            std::cerr << "quit" << std::endl;
+        }
+        free(line);
     }
-    std::cin.ignore ();
     succ = client->del_values (domainkey, changes);
     if (!succ) {
         std::cerr << "Failed to delete" << std::endl;

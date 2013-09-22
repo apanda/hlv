@@ -38,3 +38,8 @@ add_subdirectory (simple_server_lib)
 add_subdirectory (simple_client_lib)
 add_subdirectory (dropbox_client)
 add_subdirectory (simple_server)
+add_subdirectory (rendezvous_edge_box)
+add_subdirectory (rendezvous_lib)
+add_subdirectory (simple_source)
+add_subdirectory (simple_sink)
+

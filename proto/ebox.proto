@@ -15,3 +15,10 @@ message Response {
     required uint64 Token = 1;
     required bool Success = 2;
 };
+
+message RegisterSession {
+    required uint64 Token      = 1;
+    required string Group      = 2;
+    required uint64 SessionKey = 3;
+};
+

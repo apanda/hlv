@@ -44,6 +44,14 @@ simple\_server: A dead simple server that prints whatever it is sent.
 
 simple\_server\_lib: Most of the code for the simple server.
 
+rendezvous\_edge\_box: A middle box for firewall rendezvous
+
+rendezvous\_lib: A library for the Rendezvous edge box
+
+simple\_source; A simple client using the firewall rendezvous box
+
+simple\_sink: A simple client using the firewall rendezvous box
+
 Dependencies:
     OpenSSL
     CMake

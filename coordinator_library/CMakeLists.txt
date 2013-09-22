@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.8)
 project (EV_LOOKUP_UPDATE_LIB)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${EV_LOOKUP_UPDATE_LIB_SOURCE_DIR}/include)
-PROTOBUF_GENERATE_CPP(HLV_PROTO_LKP_SRC HLV_PROTO_LKP_HDRS ${EV_LOOKUP_SOURCE_DIR}/../proto/lookup.proto)
+PROTOBUF_GENERATE_CPP(HLV_PROTO_LKP_SRC HLV_PROTO_LKP_HDRS ${EV_LOOKUP_SOURCE_DIR}/proto/lookup.proto)
 file(GLOB update_client_sources . src/*.cc)
 add_library(update_client SHARED ${HLV_PROTO_LKP_SRC} 
                 ${HLV_PROTO_LKP_HDRS} ${update_client_sources})

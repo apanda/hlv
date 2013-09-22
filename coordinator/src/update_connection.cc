@@ -13,12 +13,13 @@
 #include "consts.h"
 
 namespace {
-    void redisReflector (redisAsyncContext* context, void* reply, void* data) {
-        auto connect = 
-                      (hlv::service::lookup::update::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->redisResponse (rreply);
-    }
+// Callback for redis. hiredis is in C and need this to call C++
+void redisReflector (redisAsyncContext* context, void* reply, void* data) {
+    auto connect = 
+                  (hlv::service::lookup::update::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->redisResponse (rreply);
+}
 }
 
 namespace hlv {
@@ -121,6 +122,9 @@ void Connection::set_values (const ev_lookup::Update& update) {
     std::string key = keystream.str ();
     const char** args = new const char*[2 + 2 * update.values_size ()];
     size_t index = 0;
+    // All of this weirdness because hiredis is strange. Essentially hiredis uses
+    // the spaces in the format string to dtermine how arguments should be grouped. 
+    // This really makes sending these arguments harder so do this.
     args [index++] = "hmset";
     args [index++] = key.c_str ();
     for (auto kv : update.values ()) {

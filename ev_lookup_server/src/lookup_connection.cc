@@ -12,26 +12,30 @@
 #include "consts.h"
 
 namespace {
-    void getCallback (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::server::Connection* connect = 
-                            (hlv::service::lookup::server::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->getSucceeded (rreply);
-    }
+/// A set of Redis callbacks
+// Callback for when we query the global discovery server 
+void getCallback (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::lookup::server::Connection* connect = 
+                        (hlv::service::lookup::server::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->getSucceeded (rreply);
+}
 
-    void localPermGetCallback (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::server::Connection* connect = 
-                            (hlv::service::lookup::server::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->getPermFieldSucceeded (rreply);
-    }
+// Callback for hget to get permission on local discovery keys
+void localPermGetCallback (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::lookup::server::Connection* connect = 
+                        (hlv::service::lookup::server::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->getPermFieldSucceeded (rreply);
+}
 
-    void localSmemberCallback (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::lookup::server::Connection* connect = 
-                            (hlv::service::lookup::server::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->smemberSucceeded (rreply);
-    }
+// Callback for smembers to get local discovery stuff
+void localSmemberCallback (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::lookup::server::Connection* connect = 
+                        (hlv::service::lookup::server::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->smemberSucceeded (rreply);
+}
 
 
 }
@@ -104,6 +108,7 @@ void Connection::read_size () {
             });
 }
 
+/// Execute a global query
 void Connection::global_lookup () {
     BOOST_LOG_TRIVIAL (info) << "Querying globally " 
                              << config_.prefix 
@@ -117,6 +122,8 @@ void Connection::global_lookup () {
                         query_.querystring ().c_str());  
 }
 
+/// Execute a local query
+/// Start by getting permission for the local key
 void Connection::local_lookup () {
     BOOST_LOG_TRIVIAL (info) << "Querying locally " 
                              << config_.localPrefix 
@@ -133,6 +140,7 @@ void Connection::local_lookup () {
                         hlv::service::lookup::PERM_BIT_FIELD.c_str ());  
 }
 
+/// Callback for response to the previous call, once permission bits are retrieved
 void Connection::getPermFieldSucceeded (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response to request for permissions";
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -143,6 +151,8 @@ void Connection::getPermFieldSucceeded (redisReply* reply) {
         fail_request ();
     } else if (reply->type == REDIS_REPLY_STRING) {
         uint64_t token = std::stoull(std::string(reply->str));
+        // Either this is globally accessible or we have the right token (for local
+        // queries we only return in these cases)
         if (token == query_.token () || token == 0) {
             BOOST_LOG_TRIVIAL (info) << "Successfully authenticated local token, now "
                                     << "executing actual query ";
@@ -157,6 +167,7 @@ void Connection::getPermFieldSucceeded (redisReply* reply) {
     }
 }
 
+/// Actually lookup local values
 void Connection::lookup_local_set () {
     BOOST_LOG_TRIVIAL (info) << "Looking up local set"
                              << config_.localPrefix
@@ -173,7 +184,7 @@ void Connection::lookup_local_set () {
                        hlv::service::lookup::LOCAL_SET.c_str ());
 }
 
-// Callback for getting PERM bits for local query
+// Callback for getting response to local values
 void Connection::smemberSucceeded (redisReply* reply) {
     response_.Clear();
     response_.set_token (config_.token);
@@ -239,6 +250,7 @@ void Connection::fail_request () {
     write_response (response_);
 }
 
+// Callback for getting global values succeeded
 void Connection::getSucceeded (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response";
     response_.Clear();

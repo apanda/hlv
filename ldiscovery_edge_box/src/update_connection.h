@@ -33,10 +33,18 @@ struct ConnectionInformation {
 
 };
 
-/// A connection represents a single client connected to the service.
-/// Connections are themselves stateless (out of necessity), and are mainly
-/// responsible for reading bytes off the wire and dispatching them
-/// appropriately.
+/// The logic for local update edge box.
+/// This is where the logic for the local discovery edge box is implemented.
+/// This box is used to register iwth the local discovery service. The sequence of interactions
+/// are as follows:
+/// For adding:
+///    1. Check for permission to add using HGET. If found go to step 3.
+///    2. Try setting permission bits and reading set bits (to avoid races).
+///    3. If permission bits match token, add to set of local services
+/// For deleting
+///    1. Check for permussion to add using HGET. If not found fail
+///    2. If found check if permissions match.
+///    3. If permissions match remove elements.
 class Connection
     : public std::enable_shared_from_this<Connection>
 {

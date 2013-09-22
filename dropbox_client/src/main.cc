@@ -16,9 +16,15 @@
 #include <linenoise.h>
 #include "consts.h"
 #include "getifaddr.h"
+/**
+ * This is a generic client program (don't let dropbox fool you). Really what it does
+ * is broadcast and receives messages. It is pretty boring but it exercises all sorts of
+ * code paths
+ **/
 
 namespace po = boost::program_options;
 
+/// linenoise completion function, just for fun
 void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
     switch (buf[0]) {
         case 'q':
@@ -34,10 +40,16 @@ void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
     }
 }
 
+/// Find authentication server, and then autenticate
+/// client: Lookup client
+/// name: service name
+/// uname: Username
+/// passwd: Password
 uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
                        const std::string& name,
                        const std::string& uname,
                        const std::string& passwd) {
+    // Lookup auth service
     uint64_t token = 0;
     std::map<std::string, std::string> results;
     bool qsuccess = client.Query (0,
@@ -55,12 +67,17 @@ uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
     } else {
         authservice = authserverit->second;
         std::vector<std::string> split_results;
+
+        // Break authentication result into server and port
         boost::split(split_results, authservice, boost::is_any_of(":"), boost::token_compress_off);
         if (split_results.size () != 2) {
             std::cerr << "Do not understand response" << std::endl;
             return token;
         }
         std::cout << "Authenticating with " << split_results[0] << "  " << split_results[1] << std::endl;
+
+        // Create an authentication accessor. Note we don't really supply the auth service so can do whatever
+        // it is one wants
         hlv::service::client::SyncClient client (
                 split_results[0],
                 split_results[1]);
@@ -70,6 +87,8 @@ uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
         std::tie(success, str_token) = client.authenticate (uname,
                                                             passwd.c_str (),
                                                             passwd.size ());
+
+        // Successfully authenticated
         if (success) {
             const char* tokenArray = str_token.c_str ();
             token = *((uint64_t*)tokenArray);
@@ -77,9 +96,14 @@ uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
             std::cerr << "Failed to auth" << std::endl;
         }
     }
+
+    // By default just return 0
     return token;
 }
 
+/// Find the local edge discovery box
+/// client: Lookup client
+/// token: An authentication token if that is your thing
 std::unique_ptr<hlv::ebox::update::EvLDiscoveryClient>
           discoverEdgeBox (hlv::lookup::client::EvLookupClient& client,
                                                        uint64_t token) {
@@ -109,6 +133,7 @@ std::unique_ptr<hlv::ebox::update::EvLDiscoveryClient>
     return ret;
 }
 
+/// Launch the server part of this client
 void launchService (boost::asio::io_service& io_service,
                    hlv::service::simple::server::Server& server) {
     server.start ();
@@ -116,6 +141,8 @@ void launchService (boost::asio::io_service& io_service,
 
 int main (int argc, char* argv[]) {
     init_logging();
+
+    /// Argument parsing
     std::string server = "127.0.0.1",
                 name   = "my_service",
                 uname  = "nobody",
@@ -148,6 +175,7 @@ int main (int argc, char* argv[]) {
         std::cerr << desc << std::endl;
         return 0;
     }
+
     // Create lookup client
     hlv::lookup::client::EvLookupClient lookupClient (server, lport);
     bool connect = lookupClient.connect ();
@@ -214,18 +242,23 @@ int main (int argc, char* argv[]) {
     }
 
     // Run
-    std::cerr << "Running dropbox " << std::endl;
+    std::cerr << "Running client " << std::endl;
     
     // Client
     hlv::simple::client::EvSimpleClient dclient (name,
                                         domainkey, 
                                         token,
                                         lookupClient);
+
     const int32_t HISTORY_LEN = 1000;
     linenoise::linenoiseSetCompletionCallback (completion);
     linenoise::linenoiseHistorySetMaxLen (HISTORY_LEN);
     char* line;
+
+    // Interactive loop
     while (true) {
+
+        // Read line
         line = linenoise::linenoise("client> ");
         if (line == NULL) {
             continue;
@@ -236,9 +269,11 @@ int main (int argc, char* argv[]) {
                         boost::escaped_list_separator<char> ('\\', ' ', '\"'));
         std::vector<std::string> split (tokenize.begin(), tokenize.end());
         linenoise::linenoiseHistoryAdd (line);
+
         if (split.size() == 0) {
             continue;
         }
+
         if (split[0] == std::string("quit")) {
             break;
         } else if (split[0] == std::string("send_serv")) {
@@ -279,6 +314,8 @@ int main (int argc, char* argv[]) {
         }
         free(line);
     }
+
+    // Unregister
     succ = client->del_values (domainkey, changes);
     if (!succ) {
         std::cerr << "Failed to delete" << std::endl;

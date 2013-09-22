@@ -33,10 +33,7 @@ struct ConnectionInformation {
 
 };
 
-/// A connection represents a single client connected to the service.
-/// Connections are themselves stateless (out of necessity), and are mainly
-/// responsible for reading bytes off the wire and dispatching them
-/// appropriately.
+/// The coordinator logic is implemented in the connection class
 class Connection
     : public std::enable_shared_from_this<Connection>
 {
@@ -62,7 +59,7 @@ class Connection
     void redisResponse (redisReply* reply);  
 
   private:
-    // Execute updates
+    // Process an update message
     void execute_updates (const ev_lookup::Update&);
 
     // Set permission

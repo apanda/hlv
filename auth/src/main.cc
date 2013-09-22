@@ -17,14 +17,22 @@ namespace po = boost::program_options;
 int
 main (int argc, char* argv[]) {
     GOOGLE_PROTOBUF_VERIFY_VERSION;
+    
+    // Initialize logging
     init_logging();
-    po::options_description desc("HLV service options");
+
+    // Option processing
+    po::options_description desc("Auth service options");
     std::string saddr = "0.0.0.0", 
                 sport = "8080", 
                 servicename = "my_service";
 
     std::string coordinator = "127.0.0.1";
+
+    // Coordinator port
     int32_t cport = hlv::service::lookup::UPDATE_PORT;
+
+    // Flags for auth server
     desc.add_options()
         ("help,h", "Display help")
         ("addr,a", po::value<std::string>(&saddr), "Service address")
@@ -45,11 +53,13 @@ main (int argc, char* argv[]) {
         return 0;
     }
 
-    // Create client
+    // Create coordinator client
     hlv::lookup::update::EvUpdateClient cclient (coordinator, cport);
     hlv::lookup::update::EvUpdateClient::TypeValueMap vmap;
     std::string my_address = saddr;
     bool success;
+
+    // Figure out our IP address if bound to all
     if (my_address == "0.0.0.0") {
         success = getFirstNonLoopbackAddress (my_address);
         if (!success) {
@@ -57,8 +67,12 @@ main (int argc, char* argv[]) {
             return 1;
         }
     }
+
+    // Concatenate address and port
     std::stringstream full_address;
     full_address << my_address << ":" << sport;
+
+    // Insert into the lookup DB
     vmap.insert(std::make_pair(hlv::service::lookup::AUTH_LOCATION, full_address.str()));
     success = cclient.connect ();
     if (!success) {
@@ -69,6 +83,8 @@ main (int argc, char* argv[]) {
         std::cerr << "Failed to register auth service" << std::endl;
     }
     cclient.disconnect ();
+
+    // Start server
     boost::asio::io_service io_service;
     hlv::service::server::Server server (
             io_service,
@@ -77,6 +93,7 @@ main (int argc, char* argv[]) {
             std::make_shared<hlv::service::server::AuthService>());
     server.start();
 
+    // Register to quit when necessary
     boost::asio::signal_set signals (io_service);
     signals.add (SIGINT);
     signals.add (SIGTERM);

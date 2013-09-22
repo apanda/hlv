@@ -27,6 +27,7 @@ std::string sha256(const std::string str)
 namespace hlv {
 namespace service {
 namespace server {
+// Receive an authentication token and generate a token
 bool AuthService::AuthenticateToken (const int64_t requestID,
                     const std::string& identity, 
                     const std::string& token, 
@@ -39,13 +40,11 @@ bool AuthService::AuthenticateToken (const int64_t requestID,
     return true;
 }
 
+
+// Do nothing
 bool AuthService::ProcessRequest (const int64_t requestID,
                         const hlv_service::ServiceRequest& request, 
                         hlv_service::ServiceResponse& response) {
-    assert (request.msgtype () == hlv_service::ServiceRequest_RequestType_REQUEST);
-    BOOST_LOG_TRIVIAL(info) << "Received service request " << requestID
-                            << " with requesttype " << request.request().requesttype()
-                            << " with arguments " << request.request().requestargument(); 
     response.set_requestid (requestID);
     response.set_success (false);
     response.set_response ("");

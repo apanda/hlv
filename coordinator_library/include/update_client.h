@@ -13,7 +13,7 @@ namespace ev_lookup {
 namespace hlv {
 namespace lookup {
 namespace update {
-/// Client to synchronously query the EV lookup service. This client is not
+/// Client to synchronously update the EV lookup service. This client is not
 /// thread safe and is blocking.
 class EvUpdateClient {
   public:

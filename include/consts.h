@@ -4,6 +4,7 @@
 namespace hlv {
 namespace service {
 namespace lookup {
+/// A set of constants
     const int32_t SERVER_PORT = 8085;
     const int32_t UPDATE_PORT = 8086;
     const int32_t EBOX_PORT   = 8087;

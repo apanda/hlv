@@ -13,39 +13,55 @@
 #include "consts.h"
 
 namespace {
-    void redisHashResponse (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::ebox::update::Connection* connect = 
-                            (hlv::service::ebox::update::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->hashReply (rreply);
-    }
+/// Response to HGET. HGET is called to retrieve PERM bits
+void redisHashResponse (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::ebox::update::Connection* connect = 
+                        (hlv::service::ebox::update::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->hashReply (rreply);
+}
 
-    void redisHashSetResponse (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::ebox::update::Connection* connect = 
-                            (hlv::service::ebox::update::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->hashSetReply (rreply);
-    }
+/// Response to HSETNX which is called to set permission bits
+void redisHashSetResponse (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::ebox::update::Connection* connect = 
+                        (hlv::service::ebox::update::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->hashSetReply (rreply);
+}
 
-    void redisSAddResponse (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::ebox::update::Connection* connect = 
-                            (hlv::service::ebox::update::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->saddReply (rreply);
-    }
+/// Callback for SADD used to add to the local discovery box
+void redisSAddResponse (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::ebox::update::Connection* connect = 
+                        (hlv::service::ebox::update::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->saddReply (rreply);
+}
 
-    void redisSRemResponse (redisAsyncContext* context, void* reply, void* data) {
-        hlv::service::ebox::update::Connection* connect = 
-                            (hlv::service::ebox::update::Connection*)data;
-        redisReply* rreply = (redisReply*) reply;
-        connect->sremReply (rreply);
-    }
+/// Callback for srem remove elements from local discovery box
+void redisSRemResponse (redisAsyncContext* context, void* reply, void* data) {
+    hlv::service::ebox::update::Connection* connect = 
+                        (hlv::service::ebox::update::Connection*)data;
+    redisReply* rreply = (redisReply*) reply;
+    connect->sremReply (rreply);
+}
 }
 
 namespace hlv {
 namespace service{
 namespace ebox {
 namespace update {
+/// This is where the logic for the local discovery edge box is implemented.
+/// This box is used to register iwth the local discovery service. The sequence of interactions
+/// are as follows:
+/// For adding:
+///    1. Check for permission to add using HGET. If found go to step 3.
+///    2. Try setting permission bits and reading set bits (to avoid races).
+///    3. If permission bits match token, add to set of local services
+/// For deleting
+///    1. Check for permussion to add using HGET. If not found fail
+///    2. If found check if permissions match.
+///    3. If permissions match remove elements.
+
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
                         ConnectionInformation& config) :
@@ -141,9 +157,10 @@ void Connection::read_buffer (uint64_t length) {
             });
 }
 
+// Process all requests
 void Connection::process_request () {
     if (update_.values_size() == 0) {
-        BOOST_LOG_TRIVIAL (info) << "Failing SET_VALUES due to lack of types";
+        BOOST_LOG_TRIVIAL (info) << "Failing due to lack of types";
         fail_request ();
         return;
     }
@@ -154,6 +171,7 @@ void Connection::process_request () {
     get_permtoken ();
 }
 
+// Try to get permission tokens
 void Connection::get_permtoken () {
     redisAsyncCommand (config_.redisContext, 
                       redisHashResponse,
@@ -165,6 +183,7 @@ void Connection::get_permtoken () {
                         
 }
 
+// Got a response from get permission tokens
 void Connection::hashReply (redisReply* reply) {
     // Called back in here when PERM tokens are gotten
     BOOST_LOG_TRIVIAL (info) << "Got response to looking up PERM bits";
@@ -172,6 +191,7 @@ void Connection::hashReply (redisReply* reply) {
         BOOST_LOG_TRIVIAL(error) << "Redis sent us an error, 'tis sad, fail";
         fail_request ();
     } else if (reply->type == REDIS_REPLY_NIL) {
+        // If not found and adding just try adding a permission bit
         if (update_.type () == ev_ebox::LocalUpdate::ADD) {
             BOOST_LOG_TRIVIAL (info) << "This key doesn't exist, which is fine";
             BOOST_LOG_TRIVIAL (info) << "Setting token to current token " << update_.token ();
@@ -207,6 +227,7 @@ void Connection::hashReply (redisReply* reply) {
     }
 }
 
+// Got a response from trying to exclusively adding permission bits
 void Connection::hashSetReply (redisReply* reply) {
     BOOST_LOG_TRIVIAL (info) << "Got response from setting PERM bits";
     if (reply->type == REDIS_REPLY_ERROR) {
@@ -227,6 +248,7 @@ void Connection::hashSetReply (redisReply* reply) {
     }
 }
 
+// Add elements to set of local hosts
 void Connection::update_set () {
     std::stringstream keystream;
     keystream << config_.prefix.c_str() << ":" 
@@ -264,6 +286,7 @@ void Connection::saddReply (redisReply* reply) {
     }
 }
 
+// Remove from set
 void Connection::remove_from_set () {
     std::stringstream keystream;
     keystream << config_.prefix.c_str() << ":" 

@@ -10,8 +10,7 @@
 namespace hlv {
 namespace simple {
 namespace client {
-/// Client to synchronously query the EV lookup service. This client is not
-/// thread safe and is blocking.
+/// The client part of SimpleServer
 class EvSimpleClient {
   public:
     typedef std::map<std::string, std::string> LookupResult;

@@ -23,7 +23,8 @@ int main (int argc, char* argv[]) {
     init_logging();
     std::string address = "0.0.0.0",
                 name = "my_service",
-                coordinator = "127.0.0.1";
+                coordinator = "127.0.0.1",
+                type = hlv::service::lookup::PROVIDER_LOCATION;
     uint32_t coordinator_port = hlv::service::lookup::UPDATE_PORT,
               port = 8000;
     uint64_t accessibleBy = 0;
@@ -41,7 +42,9 @@ int main (int argc, char* argv[]) {
         ("name,n", po::value<std::string>(&name)->implicit_value (name),
             "Service name")
         ("accessible,a", po::value<uint64_t>(&accessibleBy)->implicit_value (accessibleBy),
-            "Permission for accessing");
+            "Permission for accessing")
+        ("type,t", po::value<std::string>(&type)->implicit_value (type),
+            "Type of server");
     po::options_description options;
     options.add(desc);
     po::variables_map vm;
@@ -81,7 +84,7 @@ int main (int argc, char* argv[]) {
     hlv::lookup::update::EvUpdateClient coordClient (coordinator,
                                          coordinator_port);
     coordClient.connect ();
-    std::map<std::string, std::string> changes = {{hlv::service::lookup::PROVIDER_LOCATION, 
+    std::map<std::string, std::string> changes = {{type, 
                                                    regAddress}};
     bool succ = coordClient.set_values (accessibleBy, name, changes);
     if (!succ) {

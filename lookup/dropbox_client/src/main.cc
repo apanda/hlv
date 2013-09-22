@@ -11,6 +11,7 @@
 #include <sync_client.h>
 #include <logging_common.h>
 #include <simple_server.h>
+#include <simple_client.h>
 #include "consts.h"
 #include "getifaddr.h"
 
@@ -196,6 +197,16 @@ int main (int argc, char* argv[]) {
 
     // Run
     std::cerr << "Running dropbox " << std::endl;
+    
+    // Client
+    hlv::simple::client::EvSimpleClient dclient (name,
+                                        domainkey, 
+                                        token,
+                                        lookupClient);
+    succ = dclient.send_everywhere ("Hello\n");
+    if (!succ) {
+        std::cerr << "Failed to send" << std::endl;
+    }
     std::cin.ignore ();
     succ = client->del_values (domainkey, changes);
     if (!succ) {

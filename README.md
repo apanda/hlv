@@ -4,7 +4,7 @@ Extended Virtualization
 This is code for the SDNv2 Extended Virtualization component. The interesting reusable parts
 are largely in the misc directory. Here is a rundown of the contents
 
-asiohiredis: ASIO adapter for hiredis (github.com/redis/hiredis)
+asiohiredis: ASIO adapter for hiredis ([github.com/redis/hiredis])
 
 auth: A simple (trivial) authentication server.
 
@@ -34,7 +34,7 @@ ldiscovery\_client\_lib: A library to talk to the local discovery edge box; a me
 
 ldiscovery\_edge\_box: A server that changes local lookup binding.
 
-misc: Miscellaneous libraries including some code to list network interfaces and linenoise(github.com/antirez/linenoise) usable in C++
+misc: Miscellaneous libraries including some code to list network interfaces and linenoise ([github.com/antirez/linenoise]) usable in C++
 
 proto: Protobuf files
 

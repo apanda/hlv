@@ -53,8 +53,8 @@ simple\_source; A simple client using the firewall rendezvous box
 simple\_sink: A simple client using the firewall rendezvous box
 
 Dependencies:
-    OpenSSL
-    CMake
-    Boost 1.54
-    Protobuf
-    HiRedis
+    -    OpenSSL
+    -    CMake
+    -    Boost 1.54
+    -    Protobuf
+    -    HiRedis

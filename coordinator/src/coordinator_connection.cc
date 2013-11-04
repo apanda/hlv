@@ -8,15 +8,17 @@
 #include <algorithm>
 #include <cstdio>
 #include <boost/log/trivial.hpp>
-#include "update_connection.h"
-#include "update_server.h"
+#include "coordinator_connection.h"
+#include "coordinator_server.h"
 #include "consts.h"
 
 namespace {
-// Callback for redis. hiredis is in C and need this to call C++
+// Callback for redis. hiredis is in C and need this to call C++ (in particular need a 
+// function that does not need the this pointer.)
 void redisReflector (redisAsyncContext* context, void* reply, void* data) {
+    // Find connection from the data passed in
     auto connect = 
-                  (hlv::service::lookup::update::Connection*)data;
+                  (hlv::service::coordinator::Connection*)data;
     redisReply* rreply = (redisReply*) reply;
     connect->redisResponse (rreply);
 }
@@ -24,8 +26,7 @@ void redisReflector (redisAsyncContext* context, void* reply, void* data) {
 
 namespace hlv {
 namespace service{
-namespace lookup {
-namespace update {
+namespace coordinator {
 Connection::Connection (boost::asio::ip::tcp::socket socket,
                         ConnectionManager& manager,
                         ConnectionInformation& config) :
@@ -35,21 +36,33 @@ Connection::Connection (boost::asio::ip::tcp::socket socket,
     config_ (config) {
 }
 
+// Start listening on the socket.
 void Connection::start () {
     BOOST_LOG_TRIVIAL(info) << "Starting connection";
     read_size();
 }
 
+// Stop listening on the socket, close the socket.
 void Connection::stop () {
     socket_.close();
 }
 
+// Write an ev_lookup::UpdateResponse
 void Connection::write_response (const ev_lookup::UpdateResponse& response) {
+    // Bump up the refcount on this to make sure we don't delete this object while
+    // waiting for asio to be done.
     auto self(shared_from_this());
+
+    // Compute size of response
     uint64_t size = response.ByteSize ();
+
+    // All messages are 64-bits of size followed by the message
     *((uint64_t*)write_buffer_.data()) = size;
     response.SerializeToArray (write_buffer_.data() + sizeof(uint64_t), size);
+
     BOOST_LOG_TRIVIAL (info) << "Writing response";
+    
+    // Asynchronously write message
     boost::asio::async_write (socket_,
         boost::asio::buffer(write_buffer_),
         boost::asio::transfer_exactly (size + sizeof(uint64_t)),
@@ -66,6 +79,7 @@ void Connection::write_response (const ev_lookup::UpdateResponse& response) {
     );
 }
 
+// Read the 64-bit size sent before a message.
 void Connection::read_size () {
     auto self(shared_from_this());
     boost::asio::async_read (socket_, 
@@ -122,9 +136,7 @@ void Connection::set_values (const ev_lookup::Update& update) {
     std::string key = keystream.str ();
     const char** args = new const char*[2 + 2 * update.values_size ()];
     size_t index = 0;
-    // All of this weirdness because hiredis is strange. Essentially hiredis uses
-    // the spaces in the format string to dtermine how arguments should be grouped. 
-    // This really makes sending these arguments harder so do this.
+    // hiredis hmset updates. We use hmset to minimize the cost of repeated
     args [index++] = "hmset";
     args [index++] = key.c_str ();
     for (auto kv : update.values ()) {
@@ -235,7 +247,6 @@ void Connection::redisResponse (redisReply* reply) {
     write_response (response_);
 }
 
-} // namespace update
-} // namespace lookup
+} // namespace coordinator
 } // namespace service
 } // namespace hlv

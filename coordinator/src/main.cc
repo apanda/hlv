@@ -13,9 +13,9 @@
 #include <hiredisasio.h>
 #include "consts.h"
 #include "logging_common.h"
-#include "update_server.h"
+#include "coordinator_server.h"
 
-// Main file for EV lookup server
+// Main file for EV lookup coordinator
 namespace po = boost::program_options;
 namespace {
 void connectCallback (const redisAsyncContext* c, int status) {
@@ -86,13 +86,13 @@ main (int argc, char* argv[]) {
 
     asio_redis::redisBoostClient client (io_service, context);
     // Server information
-    hlv::service::lookup::update::ConnectionInformation information 
+    hlv::service::coordinator::ConnectionInformation information 
                                                     (redisAddress,
                                                      redisPort,
                                                      context,
                                                      prefix);
     // Create an update server
-    hlv::service::lookup::update::Server update (
+    hlv::service::coordinator::Server update (
             io_service,
             address,
             port,

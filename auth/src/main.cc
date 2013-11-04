@@ -5,7 +5,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
-#include <update_client.h>
+#include <coordinator_client.h>
 #include "server.h"
 #include "logging_common.h"
 #include "service.pb.h"
@@ -54,8 +54,8 @@ main (int argc, char* argv[]) {
     }
 
     // Create coordinator client
-    hlv::lookup::update::EvUpdateClient cclient (coordinator, cport);
-    hlv::lookup::update::EvUpdateClient::TypeValueMap vmap;
+    hlv::coordinator::EvUpdateClient cclient (coordinator, cport);
+    hlv::coordinator::EvUpdateClient::TypeValueMap vmap;
     std::string my_address = saddr;
     bool success;
 

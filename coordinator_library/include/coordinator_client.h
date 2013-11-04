@@ -11,8 +11,7 @@ namespace ev_lookup {
     class UpdateResponse;
 }
 namespace hlv {
-namespace lookup {
-namespace update {
+namespace coordinator {
 /// Client to synchronously update the EV lookup service. This client is not
 /// thread safe and is blocking.
 class EvUpdateClient {
@@ -94,8 +93,7 @@ class EvUpdateClient {
     // Socket
     mutable boost::asio::ip::tcp::socket socket_;
 };
-} // update
-} // lookup
+} // coordinator
 } // hlv
 #endif // __EV_LOOKUP_UPDATE_LIB__
 

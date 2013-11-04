@@ -10,7 +10,7 @@
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
 #include <getifaddr.h>
-#include <update_client.h>
+#include <coordinator_client.h>
 #include "consts.h"
 #include "logging_common.h"
 #include "rendezvous_server.h"
@@ -86,7 +86,7 @@ main (int argc, char* argv[]) {
     std::string regAddress = addressStr.str ();
 
     // Register
-    hlv::lookup::update::EvUpdateClient coordClient (coordinator,
+    hlv::coordinator::EvUpdateClient coordClient (coordinator,
                                          coordinator_port);
     coordClient.connect ();
     std::map<std::string, std::string> changes = {{hlv::service::lookup::RENDEZVOUS_LOCATION, 

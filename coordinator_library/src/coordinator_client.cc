@@ -1,11 +1,10 @@
 #include <string>
 #include <utility>
 #include <boost/log/trivial.hpp>
-#include "update_client.h"
+#include "coordinator_client.h"
 #include "lookup.pb.h"
 namespace hlv {
-namespace lookup {
-namespace update {
+namespace coordinator {
 /// Construct an EV update Client.
 /// host; string address of lookup host
 /// port: uint32_t port of lookup host
@@ -166,4 +165,4 @@ EvUpdateClient::~EvUpdateClient() {
 }
 }
 }
-}
+

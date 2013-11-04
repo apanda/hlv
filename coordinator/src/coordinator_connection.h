@@ -6,19 +6,22 @@
 #include <hiredis/async.h>
 #include "lookup.pb.h"
 #include "common_manager.h"
-#ifndef _HLV_UPDATE_CONNECTION_H_
-#define _HLV_UPDATE_CONNECTION_H_
-/// The Connection class implements the logic used by the HLV lookup service
+#ifndef _EV_UPDATE_CONNECTION_H_
+#define _EV_UPDATE_CONNECTION_H_
+/// The Connection class implements the logic used by the EV lookup service
 namespace hlv {
 namespace service{
-namespace lookup {
-namespace update {
+namespace coordinator {
 
 /// Information used by each of the connection objects for initialization.
 struct ConnectionInformation {
-    std::string redisServer; // Redis server
-    uint32_t redisPort; // Port
+    // Redis server
+    std::string redisServer; 
+    // Redis port
+    uint32_t redisPort;
+    // hiredis context
     redisAsyncContext* redisContext;
+    // Prefix: allows for multiple coordinators to share the same redis server.
     std::string prefix;
     ConnectionInformation(
             const std::string& _redisServer,
@@ -38,8 +41,10 @@ class Connection
     : public std::enable_shared_from_this<Connection>
 {
   private:
-    typedef std::shared_ptr<hlv::service::lookup::update::Connection> ConnectionPtr;
+    typedef std::shared_ptr<hlv::service::coordinator::Connection> ConnectionPtr;
+
   public:
+    // Delete a bunch of constructors we don't want.
     Connection (const Connection&) = delete;
     Connection& operator=(const Connection&) = delete;
     Connection () = delete;
@@ -49,10 +54,11 @@ class Connection
             hlv::service::common::ConnectionManager<ConnectionPtr>& manager,
             ConnectionInformation& config);
 
-    // Start listening for things
+    // Start listening on the socket. The server creates a new Connection for each
+    // client.
     void start ();
 
-    // Stop listening
+    // Stop listening on the socket. This is mostly important when exiting.
     void stop ();
 
     // Callback for Redis get
@@ -74,12 +80,14 @@ class Connection
     // Set one or more values
     void set_values (const ev_lookup::Update&);
 
-    // Listen for buffer
+    // Listen for messages. Messages to the coordinator are always encoded as a
+    // 64-bit length, followed by a Update (../proto/lookup.proto) message. 
     void read_size ();
 
-    // Read buffer off the wire
+    // Read update message from the network.
     void read_buffer (uint64_t length);
 
+    // Write an UpdateResponse
     void write_response (const ev_lookup::UpdateResponse&);
 
     // Socket for this connection
@@ -100,8 +108,7 @@ class Connection
     ev_lookup::Update update_;
     ev_lookup::UpdateResponse response_;
 };
-} // namespace update
-} // namespace lookup
+} // namespace coordinator
 } // namespace service
 } // namespace hlv
 #endif

@@ -6,20 +6,20 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/log/trivial.hpp>
-#include "update_connection.h"
+#include "coordinator_connection.h"
 #include "common_manager.h"
 #include "common_server.h"
-#ifndef _HLV_LOOKUP_UPDATE_SERVER_H_
-#define _HLV_LOOKUP_UPDATE_SERVER_H_
+#ifndef _EV_LOOKUP_UPDATE_SERVER_H_
+#define _EV_LOOKUP_UPDATE_SERVER_H_
+
 /// Alias some common files so that they are introduced in our namespace. This
 /// essentially uses the "sever constructor kit" to construct a server.
 namespace hlv {
 namespace service {
-namespace lookup {
-namespace update {
+namespace coordinator {
 
 /// EV lookup update service lookup pointer
-typedef std::shared_ptr<hlv::service::lookup::update::Connection> ConnectionPtr;
+typedef std::shared_ptr<hlv::service::coordinator::Connection> ConnectionPtr;
 
 /// EV lookup update service connection manager
 typedef hlv::service::common::ConnectionManager<ConnectionPtr> ConnectionManager;
@@ -29,8 +29,7 @@ typedef hlv::service::common::Server <Connection,
                                       ConnectionManager, 
                                       ConnectionInformation&>
                             Server;
-} // namespace update
-} // namespace lookup
+} // namespace coordinator
 } // namespace service
 } // namespace hlv
 #endif

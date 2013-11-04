@@ -6,7 +6,7 @@
 #include <boost/program_options.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/algorithm/string.hpp>
-#include <update_client.h>
+#include <coordinator_client.h>
 #include <logging_common.h>
 #include <simple_server.h>
 #include "consts.h"
@@ -81,7 +81,7 @@ int main (int argc, char* argv[]) {
     std::string regAddress = addressStr.str ();
 
     // Register
-    hlv::lookup::update::EvUpdateClient coordClient (coordinator,
+    hlv::coordinator::EvUpdateClient coordClient (coordinator,
                                          coordinator_port);
     coordClient.connect ();
     std::map<std::string, std::string> changes = {{type, 

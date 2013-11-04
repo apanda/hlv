@@ -4,7 +4,7 @@
 #include <vector>
 #include <boost/program_options.hpp>
 #include <boost/tokenizer.hpp>
-#include <update_client.h>
+#include <coordinator_client.h>
 #include "consts.h"
 #include "linenoise.h"
 namespace po = boost::program_options;
@@ -25,14 +25,14 @@ void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
     }
 }
 
-void set (const hlv::lookup::update::EvUpdateClient& client,
+void set (const hlv::coordinator::EvUpdateClient& client,
           const std::vector<std::string>& vec) {
     if (vec.size () < 4 || vec.size () % 2 != 0) {
         std::cerr << "set key type0 val0 [type1 val1 ...]" << std::endl;
         return;
     }
     const std::string& key = vec[1];
-    hlv::lookup::update::EvUpdateClient::TypeValueMap vmap;
+    hlv::coordinator::EvUpdateClient::TypeValueMap vmap;
     for (size_t i = 2; i < vec.size(); i+=2) {
         vmap.insert(make_pair(vec[i], vec[i + 1]));
     }
@@ -44,7 +44,7 @@ void set (const hlv::lookup::update::EvUpdateClient& client,
     }
 }
 
-void set_perm (const hlv::lookup::update::EvUpdateClient& client,
+void set_perm (const hlv::coordinator::EvUpdateClient& client,
           const std::vector<std::string>& vec) {
     if (vec.size () != 3) {
         std::cerr << "set key perm" << std::endl;
@@ -60,7 +60,7 @@ void set_perm (const hlv::lookup::update::EvUpdateClient& client,
     }
 }
 
-void del_key (const hlv::lookup::update::EvUpdateClient& client,
+void del_key (const hlv::coordinator::EvUpdateClient& client,
           const std::vector<std::string>& vec) {
     if (vec.size () != 2) {
         std::cerr << "del_key key" << std::endl;
@@ -75,14 +75,14 @@ void del_key (const hlv::lookup::update::EvUpdateClient& client,
     }
 }
 
-void del_types (const hlv::lookup::update::EvUpdateClient& client,
+void del_types (const hlv::coordinator::EvUpdateClient& client,
                 const std::vector<std::string>& vec) {
     if (vec.size () < 3) {
         std::cerr << "del_types key type0 [type1 ...]" << std::endl;
         return;
     }
     const std::string& key = vec[1];
-    hlv::lookup::update::EvUpdateClient::TypeList tlist;
+    hlv::coordinator::EvUpdateClient::TypeList tlist;
     for (size_t i = 2; i < vec.size(); i++) {
         tlist.push_back(vec[i]);
     }
@@ -125,7 +125,7 @@ int main (int argc, char* argv[]) {
     }
 
     // Create client
-    hlv::lookup::update::EvUpdateClient client (server, port);
+    hlv::coordinator::EvUpdateClient client (server, port);
     bool connect = client.connect ();
     if (!connect) {
         std::cerr << "Failed to connect to lookup service" << std::endl;

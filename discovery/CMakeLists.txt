@@ -12,14 +12,14 @@ else()
 endif(LIBHIREDIS_FOUND)
 
 file(GLOB ev_lookup_server_sources . src/*.cc)
-add_executable(ev_lookup_server  
+add_executable(discovery_server 
     ${HLV_PROTO_LKP_SRC} ${HLV_PROTO_LKP_HDRS} ${ev_lookup_server_sources})
-target_link_libraries(ev_lookup_server ${PROTOBUF_LIBRARIES})
-target_link_libraries(ev_lookup_server ${Boost_LIBRARIES})
-target_link_libraries(ev_lookup_server ${LIBHIREDIS_LIBRARIES})
-target_link_libraries(ev_lookup_server hiredis_asio) 
+target_link_libraries(discovery_server ${PROTOBUF_LIBRARIES})
+target_link_libraries(discovery_server ${Boost_LIBRARIES})
+target_link_libraries(discovery_server ${LIBHIREDIS_LIBRARIES})
+target_link_libraries(discovery_server hiredis_asio) 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package (Threads)
-    target_link_libraries(ev_lookup_server ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(discovery_server ${CMAKE_THREAD_LIBS_INIT})
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 

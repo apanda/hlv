@@ -1,0 +1,11 @@
+cmake_minimum_required (VERSION 2.8)
+project (ECHO_SERVER_LIB)
+include_directories(${ECHO_SERVER_LIB_SOURCE_DIR}/include)
+file(GLOB simple_sources . src/*.cc)
+add_library(echo_lib SHARED ${simple_sources})
+target_link_libraries(echo_lib ${Boost_LIBRARIES})
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    find_package (Threads)
+    target_link_libraries(echo_lib ${CMAKE_THREAD_LIBS_INIT})
+endif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+

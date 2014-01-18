@@ -50,10 +50,10 @@ main (int argc, char* argv[]) {
     desc.add_options()
         ("help,h", "Display help")
         ("address,a", po::value<std::string>(&address)->implicit_value("0.0.0.0"), "Bind to address")
-        ("port,p", po::value<std::string>(&port)->implicit_value("8085"), "Bind to port")
+        ("port", po::value<std::string>(&port)->implicit_value("8085"), "Bind to port")
         ("raddress,r", po::value<std::string>(&redisAddress)->implicit_value("127.0.0.1"), "Redis server")
         ("rport", po::value<int32_t>(&redisPort)->implicit_value(6379), "Redis port")
-        ("prefix", po::value<std::string>(&prefix)->implicit_value("ev"), 
+        ("prefix,p", po::value<std::string>(&prefix), 
                    "Prefix for redis DB")
         ("lprefix,l", po::value<std::string>(&lprefix), "Local prefix to use for this lookup server");
     po::options_description options;
@@ -68,8 +68,14 @@ main (int argc, char* argv[]) {
         return 0;
     }
 
+    if (!vm.count ("prefix")) {
+        std::cerr << "Cowardly failing to start without prefix (tenant ID)" << std::endl;
+        std::cerr << desc << std::endl;
+        return 0;
+    }
+
     if (!vm.count ("lprefix")) {
-        std::cerr << "Cowardly failing to start without local prefix";
+        std::cerr << "Cowardly failing to start without local prefix" << std::endl;
         std::cerr << desc << std::endl;
         return 0;
     }

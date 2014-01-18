@@ -49,10 +49,10 @@ main (int argc, char* argv[]) {
     desc.add_options()
         ("help,h", "Display help")
         ("address,a", po::value<std::string>(&address)->implicit_value(address), "Bind to address")
-        ("port,p", po::value<std::string>(&port)->implicit_value(port), "Bind to port")
+        ("port", po::value<std::string>(&port)->implicit_value(port), "Bind to port")
         ("raddress,r", po::value<std::string>(&redisAddress)->implicit_value(redisAddress), "Redis server")
         ("rport", po::value<int32_t>(&redisPort)->implicit_value(redisPort), "Redis port")
-        ("prefix", po::value<std::string>(&prefix)->implicit_value(prefix), 
+        ("prefix,p", po::value<std::string>(&prefix), 
                    "Prefix for redis DB");
     po::options_description options;
     options.add(desc);
@@ -62,6 +62,12 @@ main (int argc, char* argv[]) {
     po::notify(vm);
 
     if (vm.count("help")) {
+        std::cerr << desc << std::endl;
+        return 0;
+    }
+
+    if (!vm.count ("prefix")) {
+        std::cerr << "Cowardly failing to start without prefix (tenant ID)" << std::endl;
         std::cerr << desc << std::endl;
         return 0;
     }
@@ -97,6 +103,7 @@ main (int argc, char* argv[]) {
             address,
             port,
             information);
+    BOOST_LOG_TRIVIAL(info) << "Starting update server" << std::endl;
     update.start ();
 
     boost::asio::signal_set signals (io_service);

@@ -17,6 +17,7 @@ namespace lookup {
     const std::string AUTH_LOCATION = "auth";
     const std::string LDEBOX_LOCATION = "ev:ebox";
     const std::string PROVIDER_LOCATION = "ev:provider";
+    const std::string ECHO_LOCATION = "ev:echo";
     const std::string RENDEZVOUS_LOCATION = "ev:rendezvous";
 }
 }

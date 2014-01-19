@@ -31,6 +31,9 @@ class EvSimpleClient {
                              client);
 
     virtual ~EvSimpleClient();
+    
+    // Send to servers, read a response, return the response
+    bool echo_request (const std::string& type, const std::string& str, std::string& response);
 
     // Send to only servers
     bool send_to_servers (const std::string& type, const std::string& str);
@@ -48,6 +51,11 @@ class EvSimpleClient {
     // Send a query to the server
     bool send_query (const std::string& str,
                      boost::asio::ip::tcp::socket& socket) const;
+
+    // Send to echo server
+    bool send_query_echo (const std:: string& str,
+                          std::string& response, 
+                          boost::asio::ip::tcp::socket& socket) const;
 
     std::string servicename_;
     std::string lname_;

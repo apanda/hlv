@@ -24,7 +24,7 @@ int main (int argc, char* argv[]) {
     std::string address = "0.0.0.0",
                 name = "my_service",
                 coordinator = "127.0.0.1",
-                type = hlv::service::lookup::PROVIDER_LOCATION;
+                type = hlv::service::lookup::ECHO_LOCATION;
     uint32_t coordinator_port = hlv::service::lookup::UPDATE_PORT,
               port = 8000;
     uint64_t accessibleBy = 0;

@@ -46,8 +46,9 @@ void Connection::read () {
                     boost::asio::async_write(socket_, 
                         boost::asio::buffer(buffer_, bytes_transfered),
                         [this, self] (boost::system::error_code ec, 
-                                     std::size_t bytes_tranfered) {
+                                     std::size_t bytes_written) {
                             if (!ec) {
+                                BOOST_LOG_TRIVIAL(info) << "Wrote response " << bytes_written;
                                 read ();
                             } else {
                                 BOOST_LOG_TRIVIAL(info) << "Error writing response";

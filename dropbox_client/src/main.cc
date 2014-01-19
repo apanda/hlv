@@ -45,18 +45,16 @@ void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
 
 /// Find authentication server, and then autenticate
 /// client: Lookup client
-/// name: service name
 /// uname: Username
 /// passwd: Password
 uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
-                       const std::string& name,
                        const std::string& uname,
                        const std::string& passwd) {
     // Lookup auth service
     uint64_t token = 0;
     std::map<std::string, std::string> results;
     bool qsuccess = client.Query (0,
-                                  name,
+                                  hlv::service::lookup::AUTH_SERVICE,
                                   token,
                                   results);
     if (!qsuccess) {
@@ -93,8 +91,7 @@ uint64_t authenticate (hlv::lookup::client::EvLookupClient& client,
 
         // Successfully authenticated
         if (success) {
-            const char* tokenArray = str_token.c_str ();
-            token = *((uint64_t*)tokenArray);
+            token = std::stoull(str_token);
         } else {
             std::cerr << "Failed to auth" << std::endl;
         }
@@ -192,7 +189,7 @@ int main (int argc, char* argv[]) {
     // Authenticate
     uint64_t token = 0;
     if (!vm.count("noauth")) {
-        token = authenticate (lookupClient, name, uname, password);
+        token = authenticate (lookupClient, uname, password);
 
         std::cerr << "Got token " << token << std::endl;
     }

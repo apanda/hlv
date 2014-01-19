@@ -5,6 +5,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <boost/program_options.hpp>
+#include <hiredis/hiredis.h>
 #include <coordinator_client.h>
 #include "server.h"
 #include "logging_common.h"
@@ -25,7 +26,9 @@ main (int argc, char* argv[]) {
     po::options_description desc("Auth service options");
     std::string saddr = "0.0.0.0", 
                 sport = "8080", 
+                redisAddress = "127.0.0.1",
                 servicename = hlv::service::lookup::AUTH_SERVICE;
+    int32_t redisPort = hlv::service::lookup::REDIS_PORT;
 
     std::string coordinator = "127.0.0.1";
 
@@ -37,6 +40,8 @@ main (int argc, char* argv[]) {
         ("help,h", "Display help")
         ("addr,a", po::value<std::string>(&saddr), "Service address")
         ("port,p", po::value<std::string>(&sport)->implicit_value("8080"), "Service port")
+        ("raddress,r", po::value<std::string>(&redisAddress)->implicit_value("127.0.0.1"), "Redis server")
+        ("rport", po::value<int32_t>(&redisPort)->implicit_value(6379), "Redis port")
         ("name,n", po::value<std::string>(&servicename)->implicit_value(servicename), "Service name")
         ("coordinator,c", po::value<std::string>(&coordinator)->implicit_value(coordinator), "Coordinator")
         ("cport,cp", po::value<int32_t>(&cport)->implicit_value(cport), "Coordinator port");
@@ -50,6 +55,18 @@ main (int argc, char* argv[]) {
 
     if (vm.count("help")) {
         std::cerr << desc;
+        return 0;
+    }
+    //
+    // Connect to redis
+    redisContext *c  = redisConnect(redisAddress.c_str(), redisPort);
+    if (c == NULL) {
+        std::cerr << "Could not allocate redisContext" << std::endl;
+        return 0;
+    }
+
+    if (c->err) {
+        std::cerr << "Error connecting to redis " << c->errstr;
         return 0;
     }
 
@@ -84,13 +101,14 @@ main (int argc, char* argv[]) {
     }
     cclient.disconnect ();
 
+
     // Start server
     boost::asio::io_service io_service;
     hlv::service::server::Server server (
             io_service,
             saddr, 
             sport, 
-            std::make_shared<hlv::service::server::AuthService>());
+            std::make_shared<hlv::service::server::AuthService>(c, servicename));
     server.start();
 
     // Register to quit when necessary
@@ -107,6 +125,7 @@ main (int argc, char* argv[]) {
     });
     // This thread now provides I/O service
     io_service.run();
+    redisFree (c);
     google::protobuf::ShutdownProtobufLibrary();
     return 0;
 }

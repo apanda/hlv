@@ -15,6 +15,7 @@ namespace lookup {
     const std::string PERM_BIT_FIELD = "ev:perm_bits"; 
     const std::string LOCAL_SET = "ev:local_set";
     const std::string AUTH_LOCATION = "auth";
+    const std::string AUTH_SERVICE = "auth";
     const std::string LDEBOX_LOCATION = "ev:ebox";
     const std::string PROVIDER_LOCATION = "ev:provider";
     const std::string ECHO_LOCATION = "ev:echo";

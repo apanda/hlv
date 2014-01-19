@@ -35,7 +35,7 @@ int main (int argc, char* argv[]) {
             "Coordinator address")
         ("cport", po::value<uint32_t>(&coordinator_port)->implicit_value (coordinator_port),
             "Coordinator port")
-        ("address,a", po::value<std::string>(&address)->implicit_value (address),
+        ("address", po::value<std::string>(&address)->implicit_value (address),
             "Address to bind to")
         ("port,p", po::value<uint32_t>(&port)->implicit_value (port),
             "Port to bind to")

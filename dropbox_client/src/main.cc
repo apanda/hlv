@@ -34,6 +34,9 @@ void completion (const char* buf, linenoise::linenoiseCompletions* lc) {
             linenoise::linenoiseAddCompletion (lc, "send_serv");
             linenoise::linenoiseAddCompletion (lc, "send_all");
             break;
+        case 'e':
+            linenoise::linenoiseAddCompletion (lc, "echo");
+            break;
         case 'h':
             linenoise::linenoiseAddCompletion (lc, "help");
             break;
@@ -163,7 +166,9 @@ int main (int argc, char* argv[]) {
         ("password", po::value<std::string>(&password)->implicit_value (password),
             "Password")
         ("port,p", po::value<uint32_t>(&port)->implicit_value (port),
-            "Free port to use for sync");
+            "Free port to use for sync")
+        ("noauth,a", "Do not authenticate")
+        ("nolocal", "Do not register locally");
     po::options_description options;
     options.add(desc);
     po::variables_map vm;
@@ -185,62 +190,70 @@ int main (int argc, char* argv[]) {
     }
     
     // Authenticate
-    uint64_t token;
-    token = authenticate (lookupClient, name, uname, password);
+    uint64_t token = 0;
+    if (!vm.count("noauth")) {
+        token = authenticate (lookupClient, name, uname, password);
 
-    std::cerr << "Got token " << token << std::endl;
-    
-    // Discover address
-    std::string address;
-    bool asuccess = getFirstNonLoopbackAddress (address);
-    if (asuccess) {
-        std::cout << "Got IP address " << address << std::endl;;
-    } else {
-        std::cerr << "Failed to find IP " << std::endl;
-        return 0;
+        std::cerr << "Got token " << token << std::endl;
     }
-    std::stringstream addressStr;
-    addressStr << address << ":" << port;
-    std::string regAddress = addressStr.str ();
-
-    // Discover edge box
-    auto client = discoverEdgeBox (lookupClient, token); 
-    if (!client) {
-        std::cerr << "Failed to discover edge box " << std::endl;
-        return 1;
-    }
-
-    // Connect to edge box
-    bool conned = client->connect ();
-    if (!conned) {
-        std::cerr << "Failed to connect to edgebox " << std::endl;
-        return 1;
-    }
-
-    // Listen for connections
+    std::thread* t0 = NULL;
+    std::string domainkey;
+    bool succ;
+    std::unique_ptr<hlv::ebox::update::EvLDiscoveryClient> client;
+    std::list<std::string> changes;
     boost::asio::io_service io_service;
-    hlv::service::simple::server::ConnectionInformation info;
-    hlv::service::simple::server::Server syncServer (io_service,
-                                  address,
-                                  std::to_string(port), 
-                                  info);
-    launchService (io_service, syncServer);
-    std::thread t0 ([&io_service] {
-        // This thread now provides I/O service
-        io_service.run();
-    });
+    if (!vm.count("nolocal")) {
+        // Discover address
+        std::string address;
+        bool asuccess = getFirstNonLoopbackAddress (address);
+        if (asuccess) {
+            std::cout << "Got IP address " << address << std::endl;;
+        } else {
+            std::cerr << "Failed to find IP " << std::endl;
+            return 0;
+        }
+        std::stringstream addressStr;
+        addressStr << address << ":" << port;
+        std::string regAddress = addressStr.str ();
 
-    // Register with edge box
-    std::list<std::string> changes = {regAddress};
-    std::stringstream domainkeystr;
-    domainkeystr << uname << "." << name;
-    std::string domainkey = domainkeystr.str ();
-    bool succ = client->set_values (domainkey, changes);
-    if (!succ) {
-        std::cerr << "Failed to register" << std::endl;
-        return 0;
-    }
+        // Discover edge box
+        client = discoverEdgeBox (lookupClient, token); 
+        if (!client) {
+            std::cerr << "Failed to discover edge box " << std::endl;
+            return 1;
+        }
 
+        // Connect to edge box
+        bool conned = client->connect ();
+        if (!conned) {
+            std::cerr << "Failed to connect to edgebox " << std::endl;
+            return 1;
+        }
+
+        // Listen for connections
+        hlv::service::simple::server::ConnectionInformation info;
+        hlv::service::simple::server::Server syncServer (io_service,
+                                      address,
+                                      std::to_string(port), 
+                                      info);
+        launchService (io_service, syncServer);
+        t0 = new std::thread ([&io_service] {
+            // This thread now provides I/O service
+            io_service.run();
+        });
+    
+        // Register with edge box
+        changes = {regAddress};
+        std::stringstream domainkeystr;
+        domainkeystr << uname << "." << name;
+        domainkey = domainkeystr.str ();
+        succ = client->set_values (domainkey, changes);
+        if (!succ) {
+            std::cerr << "Failed to register" << std::endl;
+            return 0;
+        }
+    } 
+    
     // Run
     std::cerr << "Running client " << std::endl;
     
@@ -306,21 +319,40 @@ int main (int argc, char* argv[]) {
                     std::cerr << "Failed to send" << std::endl;
                 }
             }
+        } else if (split[0] == std::string("echo")) {
+            if (split.size () != 2) {
+                std::cerr << "echo <msg>" << std::endl;
+            } else {
+                std::string result;
+                succ = dclient.echo_request (hlv::service::lookup::ECHO_LOCATION,
+                                             split[1],
+                                             result);
+                if (!succ) {
+                    std::cerr << "Echo failed" << std::endl;
+                } else {
+                    std::cout << result << std::endl;
+                }
+            }
         } else {
             std::cerr << "Available commands " << std::endl;
             std::cerr << "send_serv [service] <msg> " << std::endl;
             std::cerr << "send_all [service] <msg> " << std::endl;
+            std::cerr << "echo <msg> " << std::endl;
             std::cerr << "quit" << std::endl;
         }
         free(line);
     }
 
     // Unregister
-    succ = client->del_values (domainkey, changes);
-    if (!succ) {
-        std::cerr << "Failed to delete" << std::endl;
+    if (!vm.count("nolocal")) {
+        succ = client->del_values (domainkey, changes);
+        if (!succ) {
+            std::cerr << "Failed to delete" << std::endl;
+        }
     }
     io_service.stop ();
-    t0.join ();
+    if (!vm.count("nolocal")) { 
+        t0->join ();
+    }
     return 1;
 }

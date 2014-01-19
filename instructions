@@ -1,0 +1,153 @@
+Dependencies
+============
+-    OpenSSL
+-    CMake
+-    Boost 1.54
+-    Protobuf
+-    Redis
+-    HiRedis [https://github.com/redis/hiredis]
+
+Building
+=======
+Building this is pretty simple, the top level CMake file just builds everything. I usually do the following
+- mkdir bin <- this is where everything goes
+- cd bin
+- cmake ..
+- make
+
+
+Running VPN without Auth
+========================
+I am first giving the no auth case since it is simpler. I'll give the auth case next. Both work.
+
+- Build as above
+
+The Discovery Box
+- Start redis. redis-server doesn't daemonize by default, so make sure you modify redis.conf to start daemonized:
+  daemonize yes is what you are looking for. Look at https://github.com/apanda/hlv/blob/lookup/config/redis.conf#L17
+- Many discovery boxes can share the same coordinator
+- The discovery box is broken into two pieces of code for historic reason, I apologize. Ordering doesn't matter in this
+  case so do the next two steps in whatever order helps. I assume foosbar.com is the tenant in this case
+
+    Run coordinator/coordinator --prefix="foosbar.com"
+  (In case this helps the help string for coordinator/coordinator is:
+                 coordinator/coordinator -h
+                Update service options:
+                  -h [ --help ]                        Display help
+                  -a [ --address ] [=arg(=0.0.0.0)]    Bind to address
+                  --port [=arg(=8086)]                 Bind to port
+                  -r [ --raddress ] [=arg(=127.0.0.1)] Redis server
+                  --rport [=arg(=6379)]                Redis port
+                  -p [ --prefix ] arg                  Prefix for redis DB
+   )
+
+  Run discovery/discovery_server --prefix="foosbar.com" -l foobar [Don't worry about the -l argument it is mostly meant
+  to indicate local context in the database. You can set it to anything. It does not matter for VPN].
+  (Again help string is:
+             discovery/discovery_server -h
+            Lookup service options:
+              -h [ --help ]                        Display help
+              -a [ --address ] [=arg(=0.0.0.0)]    Bind to address
+              --port [=arg(=8085)]                 Bind to port
+              -r [ --raddress ] [=arg(=127.0.0.1)] Redis server
+              --rport [=arg(=6379)]                Redis port
+              -p [ --prefix ] arg                  Prefix for redis DB
+              -l [ --lprefix ] arg                 Local prefix to use for this lookup 
+                                                   server
+  )
+
+The next steps only work once discovery service is available.
+
+The Echo Server
+   Run echo_server/echo_server -c <coordinator_address from above> -n food
+   (Help string is 
+          Simple Server:
+        -h [ --help ]                         Display help
+        -c [ --coordinator ] [=arg(=127.0.0.1)]
+                                              Coordinator address
+        --cport [=arg(=8086)]                 Coordinator port
+        --address [=arg(=0.0.0.0)]            Address to bind to
+        -p [ --port ] [=arg(=8000)]           Port to bind to
+        -n [ --name ] [=arg(=my_service)]     Service name
+        -a [ --accessible ] [=arg(=0)]        Permission for accessing
+        -t [ --type ] [=arg(=ev:echo)]        Type of server)
+    By the way: I tested that you can tear this down and start new ones, or just start new ones and it works fine).
+
+  Service name here is something like smtp or foobar, it names a service within the tenant's network.
+
+Echo clients
+   To run a simple command line echo client something like
+   echo_client/echo_client -n food -a "Hello world\!\!\!"
+   (Help string is 
+        Usage: echo_client [options] string
+            Echo client:
+              -h [ --help ]                      Display help
+              -a [ --noauth ]                    Do not authenticate
+              -l [ --lookup ] [=arg(=127.0.0.1)] Lookup server to contact
+              -l [ --lport ] [=arg(=8085)]       Lookup server port
+              -n [ --name ] [=arg(=my_service)]  Service name
+              -u [ --uname ] [=arg(=nobody)]     Username
+              -p [ --password ] arg              Password
+    )
+
+   There is also a more interactive client which you can run. You start it by running
+   dropbox_client/dropbox_client_mk1 -a --nolocal -n food
+   It then shows a prompt where help works, and you can run echo <string> to get echos.
+   You quit by running quit.
+
+VPN with Auth
+=============
+OK so before we get started it is worth describing how auth works right now since it is pretty dumb.
+Essentially associate with every set of credentials (username + auth) the system can return a token (an integer). By 
+default this is set to 0. 
+
+Applications like the echo client above go from username and password -> token using an authentication service.
+
+Services like the echo server register with an integer token indicating what token should have access to them (in the
+real world you would actually logically and this or do some other operation). Essentially the token is a poor capability
+like system.
+
+The discovery box checks the token supplied with the query against what was registered and only returns results if they
+agree.
+
+OK now how to use them:
+
+To create credentials (you don't need them but if you don't it isn't super useful)
+    auth_admin/redis_auth_admin <username> <password> <token>
+    for instance auth_admin/redis_auth_admin apanda panda 5 says that a username of apanda and panda has token 5.
+    If you wanted a service to be accessible by both you and me and not Tintin you would do
+    auth_admin/redis_auth_admin apanda panda 5
+    auth_admin/redis_auth_admin amin tootoonchian 5
+    auth_admin/redis_auth_admin tintin snowy 2
+
+By the way this command assumes a local redis server, the help string which tells you how to change
+this is
+    auth_admin/redis_auth_admin -h
+    Usage: redis_auth_admin <options> username password token
+    Auth service options:
+      -h [ --help ]                        Display help
+      -r [ --raddress ] [=arg(=127.0.0.1)] Redis server
+      --rport [=arg(=6379)]                Redis port
+      -n [ --name ] [=arg(=auth)]          Service name
+This redis server does not have to be the same as the one used by discovery, though it can be.
+
+
+To start the auth server itself (ordering does not matter here, you can add or remove credentials after you start the
+server) 
+    redis_auth/redis_auth_service
+Again this assumes access to the same redis server as above, if you want to change it you can do so, just run
+redis_auth/redis_auth_service -h for help.
+
+Finally to take advantage of this you run the echo server as following:
+    echo_server/echo_server -n food -a 5
+
+    From the previous example this lets amin and apanda have access to the server food, while tintin won't.
+
+The echo client is now started as 
+    echo_client/echo_client -n food -u apanda -p panda "Hello world\!\!\!"
+
+You can also start the dropbox client as
+    dropbox_client/dropbox_client_mk1 -n food -u apanda --password panda --nolocal
+
+I also tested to make sure that Skype and Dropbox work, but I assumed you didn't need them for the demo. If you do let
+me know and I can write up more instructions (they are long).

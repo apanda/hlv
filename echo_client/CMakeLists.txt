@@ -11,6 +11,7 @@ include_directories(${HLV_LOOKUP_CLIENT_LIB_SOURCE_DIR}/include)
 include_directories(${EV_MISC_SOURCE_DIR}/include)
 include_directories(${EV_SIMPLE_SERVER_SOURCE_DIR}/include)
 include_directories(${EV_SIMPLE_CLIENT_LIB_SOURCE_DIR}/include)
+include_directories(${EV_RENDEZVOUS_LIB_SOURCE_DIR}/include)
 
 file(GLOB echo_client_sources . src/*.cc)
 file(GLOB echo_client_csources . src/*.c)

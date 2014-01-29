@@ -146,12 +146,12 @@ int main (int argc, char* argv[]) {
     
     // Client
     hlv::simple::client::EvSimpleClient dclient (name,
-                                        "",  // No local part
+                                        hlv::service::lookup::ECHO_LOCATION,  // No local part
                                         token,
                                         lookupClient,
                                         nullptr);
     std::string result;
-    bool res = dclient.echo_request (hlv::service::lookup::ECHO_LOCATION,
+    bool res = dclient.local_echo_request (hlv::service::lookup::ECHO_LOCATION,
                                     query, 
                                     result);
     if (!res) {

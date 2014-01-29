@@ -147,8 +147,8 @@ void Connection::getPermFieldSucceeded (redisReply* reply) {
         BOOST_LOG_TRIVIAL (error) << "Redis sent us an error, 'tis sad, fail";
         fail_request ();
     } else if (reply->type == REDIS_REPLY_NIL) {
-        BOOST_LOG_TRIVIAL (info) << "Getting permissions field failed, failing";
-        fail_request ();
+        BOOST_LOG_TRIVIAL (info) << "Getting permissions field failed, too bad";
+        lookup_local_set ();
     } else if (reply->type == REDIS_REPLY_STRING) {
         uint64_t token = std::stoull(std::string(reply->str));
         // Either this is globally accessible or we have the right token (for local

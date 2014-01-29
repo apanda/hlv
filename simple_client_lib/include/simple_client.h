@@ -28,12 +28,14 @@ class EvSimpleClient {
                              const std::string lname,
                              const uint64_t token,
                              hlv::lookup::client::EvLookupClient& 
-                             client);
+                             client,
+                             std::unique_ptr<hlv::lookup::client::EvLookupClient>);
 
     virtual ~EvSimpleClient();
     
     // Send to servers, read a response, return the response
     bool echo_request (const std::string& type, const std::string& str, std::string& response);
+    bool local_echo_request (const std::string& type, const std::string& str, std::string& response);
 
     // Send to only servers
     bool send_to_servers (const std::string& type, const std::string& str);
@@ -62,6 +64,7 @@ class EvSimpleClient {
     uint64_t token_;
 
     hlv::lookup::client::EvLookupClient& client_;
+    std::unique_ptr<hlv::lookup::client::EvLookupClient> localClient_;
 
     // Buffer, expect never to need more than 128k
     mutable std::array<char, 131072> buffer_;

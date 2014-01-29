@@ -49,6 +49,7 @@ void EvLDiscoveryClient::disconnect () {
 bool EvLDiscoveryClient::set_values (const std::string& key, 
                                      const ValueList& values) const {
     update_->Clear ();
+    BOOST_LOG_TRIVIAL(info) << "Registering with key " << key;
     update_->set_type (ev_ebox::LocalUpdate::ADD);
     update_->set_token (token_);
     update_->set_key (key);

@@ -13,11 +13,13 @@ namespace client {
 EvSimpleClient::EvSimpleClient (const std::string name,
                          const std::string lname,
                          const uint64_t token,
-                         hlv::lookup::client::EvLookupClient&  client):
+                         hlv::lookup::client::EvLookupClient&  client, 
+                         std::unique_ptr<hlv::lookup::client::EvLookupClient> localClient):
                  servicename_ (name),
                  lname_ (lname),
                  token_ (token),
                  client_ (client),
+                 localClient_ (std::move(localClient)),
                  io_service_ () {
 }
 
@@ -100,7 +102,37 @@ bool EvSimpleClient::echo_request (const std::string& type, const std::string& s
         return false;
     }
     return send_query_echo(str, response, sock);
+}
 
+bool EvSimpleClient::local_echo_request (const std::string& type, const std::string& str, std::string& response) {
+    uint64_t token = 0;
+    std::list<std::string> results;
+    client_.LocalQuery (token_,
+                        lname_,
+                        token,
+                        results);
+    for (auto addr : results) {
+        std::vector<std::string> split_results;
+        boost::split(split_results, addr, boost::is_any_of(":"), boost::token_compress_off);
+        
+        if (split_results.size() != 2) {
+            BOOST_LOG_TRIVIAL (info) << "Do not understand return";
+            return false;
+        }
+
+        boost::asio::ip::tcp::socket sock (io_service_);
+        boost::asio::ip::tcp::resolver resolver(io_service_);
+
+
+        boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve({split_results[0], split_results[1]});
+        boost::system::error_code ec;
+        sock.connect(endpoint, ec);
+        if (ec) {
+            BOOST_LOG_TRIVIAL(error) << "Error connecting to remote endpoint " << addr;
+        }
+        send_query_echo(str, response, sock);
+    }
+    return true;
 }
 
 bool EvSimpleClient::send_to_servers (const std::string& type, const std::string& str) {
@@ -148,7 +180,7 @@ bool EvSimpleClient::send_everywhere (const std::string& str) {
 bool EvSimpleClient::send_everywhere (const std::string& type, const std::string& str) {
     std::list<std::string> results;
     uint64_t token;
-    client_.LocalQuery (token_,
+    localClient_->LocalQuery (token_,
                         lname_,
                         token,
                         results);
@@ -169,7 +201,7 @@ bool EvSimpleClient::send_everywhere (const std::string& type, const std::string
         boost::system::error_code ec;
         sock.connect(endpoint, ec);
         if (ec) {
-            BOOST_LOG_TRIVIAL(error) << "Error connecting to remote endpoint";
+            BOOST_LOG_TRIVIAL(error) << "Error connecting to remote endpoint " << addr;
             continue;
         }
         send_query (str, sock);

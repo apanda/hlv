@@ -258,7 +258,8 @@ int main (int argc, char* argv[]) {
     hlv::simple::client::EvSimpleClient dclient (name,
                                         domainkey, 
                                         token,
-                                        lookupClient);
+                                        lookupClient,
+                                        nullptr);
 
     const int32_t HISTORY_LEN = 1000;
     linenoise::linenoiseSetCompletionCallback (completion);
